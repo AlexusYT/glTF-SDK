@@ -26,9 +26,7 @@ if (WIN32)
         _SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
     )
     # Multithreaded Build
-    add_compile_options(
-        /MP
-    )
+    # add_compile_options(/MP)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Build/CMake/Modules")
