@@ -3,17 +3,25 @@
 
 #pragma once
 
+#include <iostream>
 #include <GLTFSDK/Exceptions.h>
 
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+
+namespace Microsoft::glTF {
+class Document;
+}
 
 namespace Microsoft
 {
     namespace glTF
     {
-        // Empty strings aren't valid ids. AppendIdPolicy enum values control what
+    class ExtensionDeserializer;
+    // Empty strings aren't valid ids. AppendIdPolicy enum values control what
         // happens when the Append function encounters an element with an empty id
         //
         // ThrowOnEmpty    - A GLTFException is thrown when trying to Append an
@@ -32,18 +40,70 @@ namespace Microsoft
 
         // Const template parameter T partial specialization
         template<typename T>
-        class IndexedContainer<const T, true>
-        {
+        class IndexedContainer<const T, true> {
+            std::vector<T> m_elements;
+            std::unordered_map<std::string, size_t> m_elementIndices;
+        protected:
+
+            Document* gltfDocument{};
         public:
-            const T& Front() const
-            {
-                return m_elements.front();
+
+            virtual void setGltfDocument(Document* pGltfDocument) {
+                gltfDocument = pGltfDocument;
+
+                for (auto &m_Element : m_elements) {
+
+                    if constexpr (requires() {
+                        m_Element.setGltfDocument(gltfDocument);
+                    }) {
+                        m_Element.setGltfDocument(gltfDocument);
+                    }
+                }
+            }
+            void serialize(nlohmann::json& json) const {
+                json = m_elements;
             }
 
-            const T& Back() const
-            {
-                return m_elements.back();
+            void deserialize(const nlohmann::json& json) {
+                size_t index = 0;
+                for (auto& valueArray : json) {
+                    try {
+                        auto elem = valueArray.get<T>();
+
+                        const auto& item = Append(elem, AppendIdPolicy::GenerateOnEmpty);
+                        const auto& itemId = item.id;
+
+
+                        (void)itemId;   // To disable unused-variable warnings when assert is compiled away.
+                        assert(itemId == std::to_string(index));
+                    }
+                    catch (const InvalidGLTFException& e){
+                        std::cerr << "Could not parse " << "[" << index << "]: " << e.what() << "\n";
+                        throw;
+                    }
+
+                    ++index;
+                }
             }
+
+            void deserializeExtensions(const std::shared_ptr<ExtensionDeserializer> &pDeserializer) {
+                if (!pDeserializer) return;
+                for (auto & m_Element : m_elements) {
+                    m_Element.deserializeExtensions(pDeserializer);
+                }
+            }
+
+            friend void to_json(nlohmann::json& json, const IndexedContainer& type) {
+                type.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, IndexedContainer& type) {
+                type.deserialize(json);
+            }
+
+            const T& Front() const { return m_elements.front(); }
+
+            const T& Back() const { return m_elements.back(); }
 
             const T& operator[](size_t index) const
             {
@@ -55,29 +115,23 @@ namespace Microsoft
                 throw GLTFException("index " + std::to_string(index) + " not in container");
             }
 
-            const T& operator[](const std::string& key) const
-            {
-                return operator[](GetIndex(key));
-            }
+            const T& operator[](const std::string& key) const { return operator[](GetIndex(key)); }
 
-            bool operator==(const IndexedContainer& rhs) const
-            {
-                return (m_elements == rhs.m_elements);
-            }
+            bool operator==(const IndexedContainer& rhs) const { return (m_elements == rhs.m_elements); }
 
-            bool operator!=(const IndexedContainer& rhs) const
-            {
-                return !(operator==(rhs));
-            }
+            bool operator!=(const IndexedContainer& rhs) const { return !(operator==(rhs)); }
 
-            const T& Append(const T& element, AppendIdPolicy policy = AppendIdPolicy::ThrowOnEmpty)
-            {
+            const T& Append(const T& element, AppendIdPolicy policy = AppendIdPolicy::ThrowOnEmpty) {
                 return Append(T(element), policy);
             }
 
-            const T& Append(T&& element, AppendIdPolicy policy = AppendIdPolicy::ThrowOnEmpty)
-            {
+            const T& Append(T&& element, AppendIdPolicy policy = AppendIdPolicy::ThrowOnEmpty) {
                 const bool isEmptyId = element.id.empty();
+                if constexpr (requires() {
+                    element.setGltfDocument(gltfDocument);
+                }) {
+                    element.setGltfDocument(gltfDocument);
+                }
 
                 if (isEmptyId)
                 {
@@ -113,42 +167,25 @@ namespace Microsoft
                 m_elements.clear();
             }
 
-            const std::vector<T>& Elements() const
-            {
-                return m_elements;
-            }
+            const std::vector<T>& Elements() const { return m_elements; }
 
-            const T& Get(size_t index) const
-            {
-                return operator[](index);
-            }
+            const T& Get(size_t index) const { return operator[](index); }
 
-            const T& Get(const std::string& key) const
-            {
-                return operator[](key);
-            }
+            const T& Get(const std::string& key) const { return operator[](key); }
 
-            size_t GetIndex(const std::string& key) const
-            {
+            size_t GetIndex(const std::string& key) const {
                 if (key.empty())
-                {
                     throw GLTFException("Invalid key - cannot be empty");
-                }
 
                 auto it = m_elementIndices.find(key);
 
                 if (it == m_elementIndices.end())
-                {
                     throw GLTFException("key " + key + " not in container");
-                }
 
                 return it->second;
             }
 
-            bool Has(const std::string& key) const
-            {
-                return m_elementIndices.find(key) != m_elementIndices.end();
-            }
+            bool Has(const std::string& key) const { return m_elementIndices.find(key) != m_elementIndices.end(); }
 
             void Remove(const std::string& key)
             {
@@ -166,31 +203,20 @@ namespace Microsoft
                 }
             }
 
-            void Replace(const T& element)
-            {
-                Replace(T(element));
-            }
+            void Replace(const T& element) { Replace(T(element)); }
 
-            void Replace(T&& element)
-            {
+            void Replace(T&& element) {
                 const auto index = GetIndex(element.id);
                 m_elements[index] = std::move(element);
             }
 
-            void Reserve(size_t capacity)
-            {
+            void Reserve(size_t capacity) {
                 m_elements.reserve(capacity);
                 m_elementIndices.reserve(capacity);
             }
 
-            size_t Size() const
-            {
-                return m_elements.size();
-            }
+            size_t Size() const { return m_elements.size(); }
 
-        private:
-            std::vector<T> m_elements;
-            std::unordered_map<std::string, size_t> m_elementIndices;
         };
 
         // Mutable template parameter T partial specialization - Uses private inheritance to gain the const template parameter functionality without an is-a relationship
@@ -201,6 +227,51 @@ namespace Microsoft
             // T). This means all inherited members must be qualified with 'this->' or 'IndexedContainer<const T>::'
 
         public:
+            void setGltfDocument(Document* pGltfDocument) override {
+                this->gltfDocument = pGltfDocument;
+
+                for (auto &m_Element : Elements()) {
+
+                    if constexpr (requires() {
+                        m_Element.setGltfDocument(this->gltfDocument);
+                    }) {
+                        m_Element.setGltfDocument(this->gltfDocument);
+                    }
+                }
+            }
+            void serialize(nlohmann::json& json) const {
+                json = Elements();
+            }
+
+            void deserialize(const nlohmann::json& json) {
+                size_t index = 0;
+                for (auto& valueArray : json) {
+                    try {
+                        auto elem = valueArray.get<T>();
+
+                        const auto& item = Append(elem, AppendIdPolicy::GenerateOnEmpty);
+                        const auto& itemId = item.id;
+
+
+                        (void)itemId;   // To disable unused-variable warnings when assert is compiled away.
+                        assert(itemId == std::to_string(index));
+                    }
+                    catch (const InvalidGLTFException& e){
+                        std::cerr << "Could not parse " << "[" << index << "]: " << e.what() << "\n";
+                        throw;
+                    }
+
+                    ++index;
+                }
+            }
+
+            friend void to_json(nlohmann::json& json, const IndexedContainer& type) {
+                type.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, IndexedContainer& type) {
+                type.deserialize(json);
+            }
             T& Front()
             {
                 return const_cast<T&>(IndexedContainer<const T>::Front());

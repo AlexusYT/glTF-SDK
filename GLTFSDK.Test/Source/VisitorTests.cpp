@@ -197,7 +197,7 @@ namespace Microsoft
             {
                 GLTFSDK_TEST_METHOD(VisitorTests, TestVisitor)
                 {
-                    Document gltfDoc = Deserialize(testVisitorJson);
+                    auto gltfDoc = Deserializer::Deserialize(testVisitorJson);
 
                     size_t countNode = 0;
                     size_t countNodeRoot = 0;
@@ -208,7 +208,7 @@ namespace Microsoft
                     size_t countMeshPrimitive = 0;
                     size_t countMeshPrimitiveInstances = 0;
 
-                    Visit(gltfDoc, DefaultSceneIndex,
+                    Visit(*gltfDoc, DefaultSceneIndex,
                         [&countNode, &countNodeRoot](const Node&, const Node* nodeParent)
                     {
                         countNode++;
@@ -237,7 +237,7 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(VisitorTests, TestVisitorDefaultAction)
                 {
-                    Document gltfDoc = Deserialize(testVisitorJson);
+                    auto gltfDoc = Deserializer::Deserialize(testVisitorJson);
 
                     size_t countNode = 0;
                     size_t countNodeRoot = 0;
@@ -248,7 +248,7 @@ namespace Microsoft
                     size_t countMeshPrimitive = 0;
                     size_t countMeshPrimitiveInstances = 0;
 
-                    Visit(gltfDoc, DefaultSceneIndex,
+                    Visit(*gltfDoc, DefaultSceneIndex,
                         [&countNode, &countNodeRoot](const Node&, const Node* nodeParent)
                     {
                         countNode++;
@@ -277,7 +277,7 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(VisitorTests, TestVisitorDefaultActionSpecGloss)
                 {
-                    Document gltfDoc = Deserialize(testVisitorDefaultActionSpecGlossJson, KHR::GetKHRExtensionDeserializer());
+                    auto gltfDoc = Deserializer::Deserialize(testVisitorDefaultActionSpecGlossJson, KHR::GetKHRExtensionDeserializer());
 
                     enum class TextureTypeExt : std::underlying_type_t<TextureType>
                     {
@@ -293,7 +293,7 @@ namespace Microsoft
                     size_t countImage = 0;
                     size_t countImageInstances = 0;
 
-                    Visit(gltfDoc, DefaultSceneIndex,
+                    Visit(*gltfDoc, DefaultSceneIndex,
                         [&gltfDoc, &textureTypeExpected](const Material& material, VisitState visitState, const VisitDefaultAction& visitDefaultAction)
                     {
                         if (visitState == VisitState::New)
@@ -305,13 +305,13 @@ namespace Microsoft
                                 if (!specGloss.diffuseTexture.textureId.empty())
                                 {
                                     textureTypeExpected = static_cast<TextureType>(TextureTypeExt::Diffuse);
-                                    visitDefaultAction.Visit(gltfDoc.textures.Get(specGloss.diffuseTexture.textureId), textureTypeExpected);
+                                    visitDefaultAction.Visit(gltfDoc->textures.Get(specGloss.diffuseTexture.textureId), textureTypeExpected);
                                 }
 
                                 if (!specGloss.specularGlossinessTexture.textureId.empty())
                                 {
                                     textureTypeExpected = static_cast<TextureType>(TextureTypeExt::SpecularGlossiness);
-                                    visitDefaultAction.Visit(gltfDoc.textures.Get(specGloss.specularGlossinessTexture.textureId), textureTypeExpected);
+                                    visitDefaultAction.Visit(gltfDoc->textures.Get(specGloss.specularGlossinessTexture.textureId), textureTypeExpected);
                                 }
                             }
 
@@ -343,11 +343,11 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(VisitorTests, TestVisitorTraversalDepthFirst)
                 {
-                    Document gltfDoc = Deserialize(testTraversalJson);
+                    auto gltfDoc = Deserializer::Deserialize(testTraversalJson);
 
                     std::vector<std::string> ids;
 
-                    Visit<DepthFirst>(gltfDoc, DefaultSceneIndex,
+                    Visit<DepthFirst>(*gltfDoc, DefaultSceneIndex,
                         [&ids](const Node& node, const Node*)
                     {
                         ids.push_back(node.id);
@@ -360,11 +360,11 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(VisitorTests, TestVisitorTraversalBreadthFirst)
                 {
-                    Document gltfDoc = Deserialize(testTraversalJson);
+                    auto gltfDoc = Deserializer::Deserialize(testTraversalJson);
 
                     std::vector<std::string> ids;
 
-                    Visit<BreadthFirst>(gltfDoc, DefaultSceneIndex,
+                    Visit<BreadthFirst>(*gltfDoc, DefaultSceneIndex,
                         [&ids](const Node& node, const Node*)
                     {
                         ids.push_back(node.id);
@@ -387,9 +387,9 @@ namespace Microsoft
                         }
                     };
 
-                    Document gltfDoc = Deserialize(testVisitorJson);
+                    auto gltfDoc = Deserializer::Deserialize(testVisitorJson);
 
-                    Visit(gltfDoc, DefaultSceneIndex, &VisitorFunctions::MeshPrimitiveCallback);
+                    Visit(*gltfDoc, DefaultSceneIndex, &VisitorFunctions::MeshPrimitiveCallback);
 
                     Assert::IsTrue(g_isVisited);
 

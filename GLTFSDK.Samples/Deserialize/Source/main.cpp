@@ -74,20 +74,20 @@ namespace
     };
 
     // Uses the Document class to print some basic information about various top-level glTF entities
-    void PrintDocumentInfo(const Document& document)
+    void PrintDocumentInfo(const std::shared_ptr<Document>& document)
     {
         // Asset Info
-        std::cout << "Asset Version:    " << document.asset.version << "\n";
-        std::cout << "Asset MinVersion: " << document.asset.minVersion << "\n";
-        std::cout << "Asset Generator:  " << document.asset.generator << "\n";
-        std::cout << "Asset Copyright:  " << document.asset.copyright << "\n\n";
+        std::cout << "Asset Version:    " << document->asset.version << "\n";
+        std::cout << "Asset MinVersion: " << document->asset.minVersion << "\n";
+        std::cout << "Asset Generator:  " << document->asset.generator << "\n";
+        std::cout << "Asset Copyright:  " << document->asset.copyright << "\n\n";
 
         // Scene Info
-        std::cout << "Scene Count: " << document.scenes.Size() << "\n";
+        std::cout << "Scene Count: " << document->scenes.Size() << "\n";
 
-        if (document.scenes.Size() > 0U)
+        if (document->scenes.Size() > 0U)
         {
-            std::cout << "Default Scene Index: " << document.GetDefaultScene().id << "\n\n";
+            std::cout << "Default Scene Index: " << document->GetDefaultScene().id << "\n\n";
         }
         else
         {
@@ -95,53 +95,53 @@ namespace
         }
 
         // Entity Info
-        std::cout << "Node Count:     " << document.nodes.Size() << "\n";
-        std::cout << "Camera Count:   " << document.cameras.Size() << "\n";
-        std::cout << "Material Count: " << document.materials.Size() << "\n\n";
+        std::cout << "Node Count:     " << document->nodes.Size() << "\n";
+        std::cout << "Camera Count:   " << document->cameras.Size() << "\n";
+        std::cout << "Material Count: " << document->materials.Size() << "\n\n";
 
         // Mesh Info
-        std::cout << "Mesh Count: " << document.meshes.Size() << "\n";
-        std::cout << "Skin Count: " << document.skins.Size() << "\n\n";
+        std::cout << "Mesh Count: " << document->meshes.Size() << "\n";
+        std::cout << "Skin Count: " << document->skins.Size() << "\n\n";
 
         // Texture Info
-        std::cout << "Image Count:   " << document.images.Size() << "\n";
-        std::cout << "Texture Count: " << document.textures.Size() << "\n";
-        std::cout << "Sampler Count: " << document.samplers.Size() << "\n\n";
+        std::cout << "Image Count:   " << document->images.Size() << "\n";
+        std::cout << "Texture Count: " << document->textures.Size() << "\n";
+        std::cout << "Sampler Count: " << document->samplers.Size() << "\n\n";
 
         // Buffer Info
-        std::cout << "Buffer Count:     " << document.buffers.Size() << "\n";
-        std::cout << "BufferView Count: " << document.bufferViews.Size() << "\n";
-        std::cout << "Accessor Count:   " << document.accessors.Size() << "\n\n";
+        std::cout << "Buffer Count:     " << document->buffers.Size() << "\n";
+        std::cout << "BufferView Count: " << document->bufferViews.Size() << "\n";
+        std::cout << "Accessor Count:   " << document->accessors.Size() << "\n\n";
 
         // Animation Info
-        std::cout << "Animation Count: " << document.animations.Size() << "\n\n";
+        std::cout << "Animation Count: " << document->animations.Size() << "\n\n";
 
-        for (const auto& extension : document.extensionsUsed)
+        for (const auto& extension : document->extensionsUsed)
         {
             std::cout << "Extension Used: " << extension << "\n";
         }
 
-        if (!document.extensionsUsed.empty())
+        if (!document->extensionsUsed.empty())
         {
             std::cout << "\n";
         }
 
-        for (const auto& extension : document.extensionsRequired)
+        for (const auto& extension : document->extensionsRequired)
         {
             std::cout << "Extension Required: " << extension << "\n";
         }
 
-        if (!document.extensionsRequired.empty())
+        if (!document->extensionsRequired.empty())
         {
             std::cout << "\n";
         }
     }
 
     // Uses the Document and GLTFResourceReader classes to print information about various glTF binary resources
-    void PrintResourceInfo(const Document& document, const GLTFResourceReader& resourceReader)
+    void PrintResourceInfo(const std::shared_ptr<Document>& document, const GLTFResourceReader& resourceReader)
     {
         // Use the resource reader to get each mesh primitive's position data
-        for (const auto& mesh : document.meshes.Elements())
+        for (const auto& mesh : document->meshes.Elements())
         {
             std::cout << "Mesh: " << mesh.id << "\n";
 
@@ -151,9 +151,9 @@ namespace
 
                 if (meshPrimitive.TryGetAttributeAccessorId(ACCESSOR_POSITION, accessorId))
                 {
-                    const Accessor& accessor = document.accessors.Get(accessorId);
+                    const Accessor& accessor = document->accessors.Get(accessorId);
 
-                    const auto data = resourceReader.ReadBinaryData<float>(document, accessor);
+                    const auto data = resourceReader.ReadBinaryData<float>(*document, accessor);
                     const auto dataByteLength = data.size() * sizeof(float);
 
                     std::cout << "MeshPrimitive: " << dataByteLength << " bytes of position data\n";
@@ -164,7 +164,7 @@ namespace
         }
 
         // Use the resource reader to get each image's data
-        for (const auto& image : document.images.Elements())
+        for (const auto& image : document->images.Elements())
         {
             std::string filename;
 
@@ -172,8 +172,8 @@ namespace
             {
                 assert(!image.bufferViewId.empty());
 
-                auto& bufferView = document.bufferViews.Get(image.bufferViewId);
-                auto& buffer = document.buffers.Get(bufferView.bufferId);
+                auto& bufferView = document->bufferViews.Get(image.bufferViewId);
+                auto& buffer = document->buffers.Get(bufferView.bufferId);
 
                 filename += buffer.uri; //NOTE: buffer uri is empty if image is stored in GLB binary chunk
             }
@@ -186,7 +186,7 @@ namespace
                 filename = image.uri;
             }
 
-            auto data = resourceReader.ReadBinaryData(document, image);
+            auto data = resourceReader.ReadBinaryData(*document, image);
 
             std::cout << "Image: " << image.id << "\n";
             std::cout << "Image: " << data.size() << " bytes of image data\n";
@@ -218,7 +218,7 @@ namespace
         // If the file has a '.gltf' extension then create a GLTFResourceReader
         if (pathFileExt == MakePathExt(GLTF_EXTENSION))
         {
-            auto gltfStream = streamReader->GetInputStream(pathFile.u8string()); // Pass a UTF-8 encoded filename to GetInputString
+            auto gltfStream = streamReader->GetInputStream(pathFile.string()); // Pass a UTF-8 encoded filename to GetInputString
             auto gltfResourceReader = std::make_unique<GLTFResourceReader>(std::move(streamReader));
 
             std::stringstream manifestStream;
@@ -235,7 +235,7 @@ namespace
         // JSON chunk and resource data from the binary chunk.
         if (pathFileExt == MakePathExt(GLB_EXTENSION))
         {
-            auto glbStream = streamReader->GetInputStream(pathFile.u8string()); // Pass a UTF-8 encoded filename to GetInputString
+            auto glbStream = streamReader->GetInputStream(pathFile.string()); // Pass a UTF-8 encoded filename to GetInputString
             auto glbResourceReader = std::make_unique<GLBResourceReader>(std::move(streamReader), std::move(glbStream));
 
             manifest = glbResourceReader->GetJson(); // Get the manifest from the JSON chunk
@@ -248,11 +248,11 @@ namespace
             throw std::runtime_error("Command line argument path filename extension must be .gltf or .glb");
         }
 
-        Document document;
+        std::shared_ptr<Document> document;
 
         try
         {
-            document = Deserialize(manifest);
+            document = Deserializer::Deserialize(manifest);
         }
         catch (const GLTFException& ex)
         {

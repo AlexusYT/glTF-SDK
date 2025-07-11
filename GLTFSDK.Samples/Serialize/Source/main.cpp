@@ -217,7 +217,7 @@ namespace
         }
 
         // The Document instance represents the glTF JSON manifest
-        Document document;
+        auto document = Document::create();
 
         std::string accessorIdIndices;
         std::string accessorIdPositions;
@@ -226,15 +226,15 @@ namespace
         // constructing valid glTF Buffer, BufferView and Accessor entities
         BufferBuilder bufferBuilder(std::move(resourceWriter));
 
-        CreateTriangleResources(document, bufferBuilder, accessorIdIndices, accessorIdPositions);
-        CreateTriangleEntities(document, accessorIdIndices, accessorIdPositions);
+        CreateTriangleResources(*document, bufferBuilder, accessorIdIndices, accessorIdPositions);
+        CreateTriangleEntities(*document, accessorIdIndices, accessorIdPositions);
 
         std::string manifest;
 
         try
         {
             // Serialize the glTF Document into a JSON manifest
-            manifest = Serialize(document, SerializeFlags::Pretty);
+            manifest = Serializer::Serialize(document, SerializeFlags::Pretty);
         }
         catch (const GLTFException& ex)
         {
@@ -250,11 +250,11 @@ namespace
 
         if (auto glbResourceWriter = dynamic_cast<GLBResourceWriter*>(&gltfResourceWriter))
         {
-            glbResourceWriter->Flush(manifest, pathFile.u8string()); // A GLB container isn't created until the GLBResourceWriter::Flush member function is called
+            glbResourceWriter->Flush(manifest, pathFile.string()); // A GLB container isn't created until the GLBResourceWriter::Flush member function is called
         }
         else
         {
-            gltfResourceWriter.WriteExternal(pathFile.u8string(), manifest); // Binary resources have already been written, just need to write the manifest
+            gltfResourceWriter.WriteExternal(pathFile.string(), manifest); // Binary resources have already been written, just need to write the manifest
         }
     }
 }

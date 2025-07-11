@@ -5,12 +5,13 @@
 #include <GLTFSDK/Exceptions.h>
 
 #include <unordered_map>
+#include <GLTFSDK/valijson_nlohmann_bundled.hpp>
 
 using namespace Microsoft::glTF;
 
 namespace
 {
-    class RemoteSchemaDocumentProvider : public rapidjson::IRemoteSchemaDocumentProvider
+    class RemoteSchemaDocumentProvider
     {
     public:
         RemoteSchemaDocumentProvider(std::unique_ptr<const ISchemaLocator> schemaLocator) : schemaLocator(std::move(schemaLocator))
@@ -18,43 +19,43 @@ namespace
             assert(this->schemaLocator);
         }
 
-        const rapidjson::SchemaDocument* GetRemoteDocumentStr(const std::string& uri)
-        {
-            auto itDoc = schemaDocuments.find(uri);
+        nlohmann::json getJson(const std::string& uri) {
 
-            if (itDoc != schemaDocuments.end())
-            {
-                return &(itDoc->second);
+            try {
+                return nlohmann::json::parse(schemaLocator->GetSchemaContent(uri));
+            }catch (...) {
+                throw GLTFException("Schema document at " + uri + " is not valid JSON");
             }
+        }
 
-            rapidjson::Document document;
+        valijson::Schema GetRemoteDocumentStr(const std::string& uri)
+        {
 
-            if (document.Parse(schemaLocator->GetSchemaContent(uri)).HasParseError())
-            {
+            valijson::Schema schema;
+
+            try {
+                nlohmann::json document = getJson(uri);
+                valijson::SchemaParser parser(valijson::SchemaParser::kDraft4);
+                const valijson::adapters::NlohmannJsonAdapter schemaDocumentAdapter(document);
+                parser.populateSchema(schemaDocumentAdapter, schema, [this](const std::string &uri) {
+                    return new nlohmann::json(nlohmann::json::parse(schemaLocator->GetSchemaContent(uri)));;
+                },[](const nlohmann::json* json) {
+                    delete json;
+                });
+            }catch (...) {
                 throw GLTFException("Schema document at " + uri + " is not valid JSON");
             }
 
-            auto result = schemaDocuments.emplace(uri, rapidjson::SchemaDocument(document, nullptr, 0, this));
-            assert(result.second);
-            auto resultSchemaDoc = &(result.first->second);
-            assert(resultSchemaDoc);
-
-            return resultSchemaDoc;
-        }
-
-        const rapidjson::SchemaDocument* GetRemoteDocument(const char* uri, rapidjson::SizeType length) override
-        {
-            return GetRemoteDocumentStr(std::string(uri, length));
+            return schema;
         }
 
         const std::unique_ptr<const ISchemaLocator> schemaLocator;
 
     private:
-        std::unordered_map<std::string, rapidjson::SchemaDocument> schemaDocuments;
     };
 }
 
-void Microsoft::glTF::ValidateDocumentAgainstSchema(const rapidjson::Document& document, const std::string& schemaUri, std::unique_ptr<const ISchemaLocator> schemaLocator)
+void Microsoft::glTF::ValidateDocumentAgainstSchema(const nlohmann::json& document, const std::string& schemaUri, std::unique_ptr<const ISchemaLocator> schemaLocator)
 {
     if (!schemaLocator)
     {
@@ -63,23 +64,21 @@ void Microsoft::glTF::ValidateDocumentAgainstSchema(const rapidjson::Document& d
 
     RemoteSchemaDocumentProvider provider(std::move(schemaLocator));
 
-    if (auto* schemaDocument = provider.GetRemoteDocumentStr(schemaUri))
-    {
-        rapidjson::SchemaValidator schemaValidator(*schemaDocument);
+    const auto &schemaDocument = provider.GetRemoteDocumentStr(schemaUri);
 
-        if (!document.Accept(schemaValidator))
-        {
-            rapidjson::StringBuffer sb;
+    valijson::Validator validator(valijson::Validator::kStrongTypes);
+    valijson::ValidationResults results;
+    const valijson::adapters::NlohmannJsonAdapter targetDocumentAdapter(document);
+    if (!validator.validate(schemaDocument, targetDocumentAdapter, &results)) {
+        valijson::ValidationResults::Error validationError;
+        while (results.popError(validationError)) {
 
-            const std::string schemaKeyword = schemaValidator.GetInvalidSchemaKeyword();
-            schemaValidator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
-            const std::string schemaInvalid = sb.GetString();
+            std::string context;
+            for (auto &itr: validationError.context) { context += itr; }
 
-            throw ValidationException("Schema violation at " + schemaInvalid + " due to " + schemaKeyword);
+            throw ValidationException("Schema violation at " + context + " due to " + validationError.description);
+
         }
     }
-    else
-    {
-        throw GLTFException("Schema document at " + schemaUri + " could not be located");
-    }
+
 }

@@ -27,19 +27,19 @@ namespace
     using namespace Microsoft::glTF;
     using namespace Microsoft::glTF::Test;
 
-    Document ImportAndParseGLB(std::shared_ptr<IStreamReader> streamReader, const std::shared_ptr<std::istream>& glbStream)
+    std::shared_ptr<Document> ImportAndParseGLB(std::shared_ptr<IStreamReader> streamReader, const std::shared_ptr<std::istream>& glbStream)
     {
         GLBResourceReader resourceReader(streamReader, glbStream);
         auto json = resourceReader.GetJson();
-        auto doc = Deserialize(json);
+        auto doc = Deserializer::Deserialize(json);
         return doc;
     }
 
-    Document ImportAndParseGLTF(std::shared_ptr<IStreamReader> streamReader, const std::shared_ptr<std::istream>& stream)
+    std::shared_ptr<Document> ImportAndParseGLTF(std::shared_ptr<IStreamReader> streamReader, const std::shared_ptr<std::istream>& stream)
     {
         GLTFResourceReader resourceReader(streamReader);
         auto json = std::string(std::istreambuf_iterator<char>(*stream), std::istreambuf_iterator<char>());
-        auto doc = Deserialize(json);
+        auto doc = Deserializer::Deserialize(json);
         return doc;
     }
 
@@ -57,16 +57,16 @@ namespace
 
         // We're only checking the offsets for mesh 0 for the purpose of this test. Feel free to add support
         // for multiple meshes if necessary.
-        auto mesh = doc.meshes[0];
+        auto mesh = doc->meshes[0];
         auto primitive = mesh.primitives[0];
 
-        auto indicesAccessor = doc.accessors.Get(primitive.indicesAccessorId);
-        auto positionsAccessor = doc.accessors.Get(primitive.attributes.at(ACCESSOR_POSITION));
-        auto normalsAccessor = doc.accessors.Get(primitive.attributes.at(ACCESSOR_NORMAL));
+        auto indicesAccessor = doc->accessors.Get(primitive.indicesAccessorId);
+        auto positionsAccessor = doc->accessors.Get(primitive.attributes.at(ACCESSOR_POSITION));
+        auto normalsAccessor = doc->accessors.Get(primitive.attributes.at(ACCESSOR_NORMAL));
 
-        auto indicesBufferView = doc.bufferViews.Get(indicesAccessor.bufferViewId);
-        auto positionsBufferView = doc.bufferViews.Get(positionsAccessor.bufferViewId);
-        auto normalsBufferView = doc.bufferViews.Get(normalsAccessor.bufferViewId);
+        auto indicesBufferView = doc->bufferViews.Get(indicesAccessor.bufferViewId);
+        auto positionsBufferView = doc->bufferViews.Get(positionsAccessor.bufferViewId);
+        auto normalsBufferView = doc->bufferViews.Get(normalsAccessor.bufferViewId);
 
         Assert::AreEqual(indicesBufferView.byteOffset, size_t(0));
         Assert::AreEqual(indicesBufferView.byteLength, indicesBufferViewLength);
@@ -79,24 +79,24 @@ namespace
     void TestGLTFRoundTrip(const std::string& dataStr)
     {
         // Deserialize JSON string -> Document
-        auto originalDoc = Deserialize(dataStr);
+        auto originalDoc = Deserializer::Deserialize(dataStr);
 
         // Serialize Document -> JSON string
-        auto reserializedJson = Serialize(originalDoc);
+        auto reserializedJson = Serializer::Serialize(originalDoc);
 
         // Deserialize JSON string -> Document
-        auto roundtrippedDoc = Deserialize(reserializedJson);
+        auto roundtrippedDoc = Deserializer::Deserialize(reserializedJson);
 
         // Compare input and output Documents
-        Assert::IsTrue(originalDoc == roundtrippedDoc, L"Input gltf and output gltf are not equal");
+        Assert::IsTrue(*originalDoc == *roundtrippedDoc, L"Input gltf and output gltf are not equal");
     }
 
-    Document TestDeserializeValidGLTFFile(const char* resourcePath)
+    std::shared_ptr<Document> TestDeserializeValidGLTFFile(const char* resourcePath)
     {
         auto input = ReadLocalAsset(resourcePath);
         auto readwriter = std::make_shared<StreamReaderWriter>();
         auto doc = ImportAndParseGLTF(readwriter, input);
-        Validation::Validate(doc);
+        Validation::Validate(*doc);
         return doc;
     }
 
@@ -125,12 +125,12 @@ namespace
         }, L"Expected exception was not thrown");
     }
 
-    Document TestDeserializeValidGLBFile(const char* resourcePath)
+   std::shared_ptr<Document> TestDeserializeValidGLBFile(const char* resourcePath)
     {
         auto input = ReadLocalAsset(resourcePath);
         auto readwriter = std::make_shared<StreamReaderWriter>();
         auto doc = ImportAndParseGLB(readwriter, input);
-        Validation::Validate(doc);
+        Validation::Validate(*doc);
         return doc;
     }
 
@@ -344,11 +344,11 @@ namespace Microsoft
 
                     auto doc = ImportAndParseGLTF(readwriter, input);
 
-                    auto mesh = doc.meshes[0];
+                    auto mesh = doc->meshes[0];
                     auto primitive = mesh.primitives[0];
-                    auto indicesAccessor = doc.accessors.Get(primitive.indicesAccessorId);
-                    auto positionsAccessor = doc.accessors.Get(primitive.attributes.at(ACCESSOR_POSITION));
-                    auto normalsAccessor = doc.accessors.Get(primitive.attributes.at(ACCESSOR_NORMAL));
+                    auto indicesAccessor = doc->accessors.Get(primitive.indicesAccessorId);
+                    auto positionsAccessor = doc->accessors.Get(primitive.attributes.at(ACCESSOR_POSITION));
+                    auto normalsAccessor = doc->accessors.Get(primitive.attributes.at(ACCESSOR_NORMAL));
 
                     Assert::AreEqual(0.f, indicesAccessor.min[0]);
                     Assert::AreEqual(23.f, indicesAccessor.max[0]);
@@ -415,7 +415,7 @@ namespace Microsoft
                 {
                     // Verify that trying to access the default scene in a document
                     // which has no scenes, throws the expected exception.
-                    auto GetScene = [] { Document().GetDefaultScene(); };
+                    auto GetScene = [] { Document::create()->GetDefaultScene(); };
                     Assert::ExpectException<DocumentException>( GetScene, L"Expected DocumentException was not thrown" );
                 }
 
@@ -424,10 +424,10 @@ namespace Microsoft
                     auto doc = TestDeserializeValidGLTFFile(c_meshPrimitivesUV04);
 
                     // Check for expected values in document
-                    Assert::AreEqual<size_t>(doc.materials[0].metallicRoughness.baseColorTexture.texCoord, 1);
-                    Assert::AreEqual<size_t>(doc.materials[0].normalTexture.texCoord, 1);
+                    Assert::AreEqual<size_t>(doc->materials[0].metallicRoughness.baseColorTexture.texCoord, 1);
+                    Assert::AreEqual<size_t>(doc->materials[0].normalTexture.texCoord, 1);
 
-                    Assert::AreEqual<std::string>(doc.meshes[0].primitives[0].attributes.at(ACCESSOR_TEXCOORD_1), "5");
+                    Assert::AreEqual<std::string>(doc->meshes[0].primitives[0].attributes.at(ACCESSOR_TEXCOORD_1), "5");
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, GLTF_DeserializeExtensionsUsed)
@@ -435,7 +435,7 @@ namespace Microsoft
                     auto doc = TestDeserializeValidGLTFFile(c_cubeJson);
 
                     // Check for expected values in document
-                    Assert::IsTrue(doc.IsExtensionUsed(KHR::Materials::PBRSPECULARGLOSSINESS_NAME));
+                    Assert::IsTrue(doc->IsExtensionUsed(KHR::Materials::PBRSPECULARGLOSSINESS_NAME));
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, GLTF_RoundTripTexCoord1)
@@ -448,13 +448,13 @@ namespace Microsoft
                     auto doc = TestDeserializeValidGLTFFile(c_animatedTriangleJson);
 
                     // Check for expected values in document
-                    Assert::AreEqual<std::string>(doc.animations.Get("0").channels[0].samplerId, "0");
-                    Assert::AreEqual<std::string>(doc.animations.Get("0").channels[0].target.nodeId, "0");
-                    Assert::IsTrue(doc.animations.Get("0").channels[0].target.path == TARGET_ROTATION);
+                    Assert::AreEqual<std::string>(doc->animations.Get("0").channels[0].samplerId, "0");
+                    Assert::AreEqual<std::string>(doc->animations.Get("0").channels[0].target.nodeId, "0");
+                    Assert::IsTrue(doc->animations.Get("0").channels[0].target.path == TARGET_ROTATION);
 
-                    Assert::AreEqual<std::string>(doc.animations.Get("0").samplers[0].inputAccessorId, "2");
-                    Assert::IsTrue(doc.animations.Get("0").samplers[0].interpolation == INTERPOLATION_LINEAR);
-                    Assert::AreEqual<std::string>(doc.animations.Get("0").samplers[0].outputAccessorId, "3");
+                    Assert::AreEqual<std::string>(doc->animations.Get("0").samplers[0].inputAccessorId, "2");
+                    Assert::IsTrue(doc->animations.Get("0").samplers[0].interpolation == INTERPOLATION_LINEAR);
+                    Assert::AreEqual<std::string>(doc->animations.Get("0").samplers[0].outputAccessorId, "3");
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, GLTF_DeserializeSkinnedAnimation)
@@ -462,27 +462,27 @@ namespace Microsoft
                     auto doc = TestDeserializeValidGLTFFile(c_riggedSimpleJson);
 
                     // Check for expected values in document
-                    Assert::AreEqual<std::string>(doc.skins.Get("0").inverseBindMatricesAccessorId, "13");
-                    Assert::AreEqual<std::string>(doc.skins.Get("0").skeletonId, "2");
-                    Assert::IsTrue(doc.skins.Get("0").jointIds.size() == 2);
-                    Assert::AreEqual<std::string>(doc.skins.Get("0").jointIds[0], "2");
-                    Assert::AreEqual<std::string>(doc.skins.Get("0").jointIds[1], "3");
+                    Assert::AreEqual<std::string>(doc->skins.Get("0").inverseBindMatricesAccessorId, "13");
+                    Assert::AreEqual<std::string>(doc->skins.Get("0").skeletonId, "2");
+                    Assert::IsTrue(doc->skins.Get("0").jointIds.size() == 2);
+                    Assert::AreEqual<std::string>(doc->skins.Get("0").jointIds[0], "2");
+                    Assert::AreEqual<std::string>(doc->skins.Get("0").jointIds[1], "3");
 
 
-                    Assert::AreEqual<std::string>(doc.animations.Get("0").channels[0].samplerId, "0");
-                    Assert::AreEqual<std::string>(doc.animations.Get("0").channels[0].target.nodeId, "2");
-                    Assert::IsTrue(doc.animations.Get("0").channels[0].target.path == TARGET_TRANSLATION);
+                    Assert::AreEqual<std::string>(doc->animations.Get("0").channels[0].samplerId, "0");
+                    Assert::AreEqual<std::string>(doc->animations.Get("0").channels[0].target.nodeId, "2");
+                    Assert::IsTrue(doc->animations.Get("0").channels[0].target.path == TARGET_TRANSLATION);
 
-                    Assert::AreEqual<std::string>(doc.animations.Get("1").channels[2].samplerId, "2");
-                    Assert::AreEqual<std::string>(doc.animations.Get("1").channels[2].target.nodeId, "3");
-                    Assert::IsTrue(doc.animations.Get("1").channels[2].target.path == TARGET_SCALE);
+                    Assert::AreEqual<std::string>(doc->animations.Get("1").channels[2].samplerId, "2");
+                    Assert::AreEqual<std::string>(doc->animations.Get("1").channels[2].target.nodeId, "3");
+                    Assert::IsTrue(doc->animations.Get("1").channels[2].target.path == TARGET_SCALE);
 
-                    Assert::AreEqual<std::string>(doc.animations.Get("1").samplers[1].inputAccessorId, "9");
-                    Assert::IsTrue(doc.animations.Get("0").samplers[0].interpolation == INTERPOLATION_LINEAR);
-                    Assert::AreEqual<std::string>(doc.animations.Get("1").samplers[1].outputAccessorId, "11");
+                    Assert::AreEqual<std::string>(doc->animations.Get("1").samplers[1].inputAccessorId, "9");
+                    Assert::IsTrue(doc->animations.Get("0").samplers[0].interpolation == INTERPOLATION_LINEAR);
+                    Assert::AreEqual<std::string>(doc->animations.Get("1").samplers[1].outputAccessorId, "11");
 
-                    Assert::AreEqual<std::string>(doc.meshes.Get("0").primitives[0].attributes.at(ACCESSOR_JOINTS_0), "1");
-                    Assert::AreEqual<std::string>(doc.meshes.Get("0").primitives[0].attributes.at(ACCESSOR_WEIGHTS_0), "4");
+                    Assert::AreEqual<std::string>(doc->meshes.Get("0").primitives[0].attributes.at(ACCESSOR_JOINTS_0), "1");
+                    Assert::AreEqual<std::string>(doc->meshes.Get("0").primitives[0].attributes.at(ACCESSOR_WEIGHTS_0), "4");
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, GLTF_Deserialize_Positions_Vec3_Float_Interleaved)
@@ -493,8 +493,8 @@ namespace Microsoft
                     GLBResourceReader resourceReader(readwriter, input);
                     auto json = resourceReader.GetJson();
 
-                    auto doc = Deserialize(json);
-                    auto output = MeshPrimitiveUtils::GetPositions(doc, resourceReader, doc.accessors.Get("2"));
+                    auto doc = Deserializer::Deserialize(json);
+                    auto output = MeshPrimitiveUtils::GetPositions(*doc, resourceReader, doc->accessors.Get("2"));
 
                     std::vector<float> expected = {
                         -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f,
@@ -518,44 +518,44 @@ namespace Microsoft
                 GLTFSDK_TEST_METHOD(GLTFTests, Verify_Extensions_In_ExtensionsUsed)
                 {
                     // Add an extension to extensions and add it to extensionsUsed
-                    Document doc;
-                    doc.extensions.emplace("MyExtension", "{}");
-                    doc.extensionsUsed.emplace("MyExtension");
-                    auto reserializedJson = Serialize(doc);
+                    auto doc = Document::create();
+                    doc->extensions.emplace("MyExtension", "{}");
+                    doc->extensionsUsed.emplace("MyExtension");
+                    auto reserializedJson = Serializer::Serialize(doc);
 
                     // Add an extension to extensions without adding it to extensionsUsed
                     Assert::ExpectException<GLTFException>(
                         []()
                     {
-                        Document doc;
-                        doc.extensions.emplace("MyExtension", "{}");
-                        auto reserializedJson = Serialize(doc);
+                        auto doc = Document::create();
+                        doc->extensions.emplace("MyExtension", "{}");
+                        auto reserializedJson = Serializer::Serialize(doc);
                     }, L"missing extensionsUsed value should have thrown an exception.");
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, Verify_ExtensionsRequired_In_ExtensionsUsed)
                 {
                     // Add an extension to extensionsRequired and add it to extensionsUsed
-                    Document doc;
-                    doc.extensions.emplace("MyExtension", "{}");
-                    doc.extensionsUsed.emplace("MyExtension");
-                    doc.extensionsRequired.emplace("MyExtension");
-                    auto reserializedJson = Serialize(doc);
+                    auto doc = Document::create();
+                    doc->extensions.emplace("MyExtension", "{}");
+                    doc->extensionsUsed.emplace("MyExtension");
+                    doc->extensionsRequired.emplace("MyExtension");
+                    auto reserializedJson = Serializer::Serialize(doc);
 
                     // Add an extension to extensionsRequired without adding it to extensionsUsed
                     Assert::ExpectException<GLTFException>(
                         []()
                     {
-                        Document doc;
-                        doc.extensions.emplace("MyExtension", "{}");
-                        doc.extensionsRequired.emplace("MyExtension");
-                        auto reserializedJson = Serialize(doc);
+                    auto doc = Document::create();
+                        doc->extensions.emplace("MyExtension", "{}");
+                        doc->extensionsRequired.emplace("MyExtension");
+                        auto reserializedJson = Serializer::Serialize(doc);
                     }, L"missing extensionsUsed value should have thrown an exception.");
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, Verify_MeshPrimitive_Attributes_RoundTrip)
                 {
-                    Document doc;
+                    auto doc = Document::create();
 
                     MeshPrimitive primitive;
                     primitive.mode = MESH_TRIANGLES;
@@ -564,132 +564,70 @@ namespace Microsoft
                     Mesh mesh;
                     mesh.id = "0";
                     mesh.primitives.push_back(primitive);
-                    doc.meshes.Append(mesh);
+                    doc->meshes.Append(mesh);
 
                     Accessor accessor0;
                     accessor0.id = "0";
                     accessor0.type = TYPE_SCALAR;
                     accessor0.componentType = COMPONENT_FLOAT;
                     accessor0.count = 1;
-                    doc.accessors.Append(accessor0);
+                    doc->accessors.Append(accessor0);
                     Accessor accessor1;
                     accessor1.id = "1";
                     accessor1.type = TYPE_SCALAR;
                     accessor1.componentType = COMPONENT_FLOAT;
                     accessor1.count = 1;
-                    doc.accessors.Append(accessor1);
+                    doc->accessors.Append(accessor1);
 
-                    auto serializedJson = Serialize(doc);
+                    auto serializedJson = Serializer::Serialize(doc);
 
-                    Document doc2 = Deserialize(serializedJson);
+                    auto doc2 = Deserializer::Deserialize(serializedJson);
 
-                    Assert::AreEqual<size_t>(doc2.meshes.Size(), 1);
-                    Assert::AreEqual<size_t>(doc2.meshes[0].primitives.size(), 1);
-                    Assert::AreEqual<size_t>(doc2.meshes[0].primitives[0].attributes.size(), 2);
-                    Assert::AreEqual<std::string>(doc2.meshes[0].primitives[0].attributes.at("EXTRA_ATTRIBUTE"), "0");
-                    Assert::AreEqual<std::string>(doc2.meshes[0].primitives[0].attributes.at(ACCESSOR_POSITION), "1");
+                    Assert::AreEqual<size_t>(doc2->meshes.Size(), 1);
+                    Assert::AreEqual<size_t>(doc2->meshes[0].primitives.size(), 1);
+                    Assert::AreEqual<size_t>(doc2->meshes[0].primitives[0].attributes.size(), 2);
+                    Assert::AreEqual<std::string>(doc2->meshes[0].primitives[0].attributes.at("EXTRA_ATTRIBUTE"), "0");
+                    Assert::AreEqual<std::string>(doc2->meshes[0].primitives[0].attributes.at(ACCESSOR_POSITION), "1");
 
-                    Assert::IsTrue(doc == doc2, L"Input gltf and output gltf are not equal");
-                }
-
-                GLTFSDK_TEST_METHOD(GLTFTests, UnicodeByteOrderMark)
-                {
-                    constexpr static const char assetBom[] = "\xEF\xBB\xBF";
-                    constexpr static const char asset[] = R"(
-{
-    "asset": {
-        "version": "2.0",
-        "generator": "glTF SDK Unit Tests"
-    }
-})";
-
-                    // Test the overload of Deserialize that accepts a string
-                    {
-                        std::stringstream ss;
-
-                        ss << assetBom;
-                        ss << asset;
-
-                        auto documentWithBom = Deserialize(ss.str(), DeserializeFlags::IgnoreByteOrderMark);
-                        auto documentWithoutBom = Deserialize(asset);
-
-                        Assert::IsTrue(documentWithBom == documentWithoutBom, L"Deserialized asset with utf8 BOM doesn't match asset without utf8 BOM");
-                    }
-
-                    // Test the overload of Deserialize that accepts a stream
-                    {
-                        std::stringstream ss;
-
-                        ss << assetBom;
-                        ss << asset;
-
-                        auto documentWithBom = Deserialize(ss, DeserializeFlags::IgnoreByteOrderMark); // Note that the stringstream was passed to Deserialize
-                        auto documentWithoutBom = Deserialize(asset);
-
-                        Assert::IsTrue(documentWithBom == documentWithoutBom, L"Deserialized asset with utf8 BOM doesn't match asset without utf8 BOM");
-                    }
-
-                    // Test the overload of Deserialize that accepts a string
-                    Assert::ExpectException<GLTFException>([]
-                    {
-                        std::stringstream ss;
-
-                        ss << assetBom;
-                        ss << asset;
-
-                        // If the IgnoreByteOrderMark flag isn't specified then a BOM should result in Deserialize throwing an exception
-                        Deserialize(ss.str(), DeserializeFlags::None);
-                    });
-
-                    // Test the overload of Deserialize that accepts a stream
-                    Assert::ExpectException<GLTFException>([]
-                    {
-                        std::stringstream ss;
-
-                        ss << assetBom;
-                        ss << asset;
-
-                        // If the IgnoreByteOrderMark flag isn't specified then a BOM should result in Deserialize throwing an exception
-                        Deserialize(ss, DeserializeFlags::None);
-                    });
+                    Assert::IsTrue(*doc == *doc2, L"Input gltf and output gltf are not equal");
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, SchemaFlagsNone)
                 {
                     Assert::ExpectException<ValidationException>([json = asset_invalid_version]()
                     {
-                        Deserialize(json, DeserializeFlags::None, SchemaFlags::None);
+                        Deserializer::Deserialize(json, SchemaFlags::None);
                     });
 
                     Assert::ExpectException<ValidationException>([json = node_invalid_children]()
                     {
-                        Deserialize(json, DeserializeFlags::None, SchemaFlags::None);
+                        Deserializer::Deserialize(json, SchemaFlags::None);
                     });
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, SchemaFlagsDisableSchema)
                 {
                     // SchemaFlags::DisableSchemaRoot - disables all schema validation
-                    auto document = Deserialize(asset_invalid_version, DeserializeFlags::None, SchemaFlags::DisableSchemaRoot);
+                    auto document = Deserializer::Deserialize(asset_invalid_version, SchemaFlags::DisableSchemaRoot);
 
-                    Assert::AreEqual(document.asset.version.c_str(), "2.0.0"); // Assert that the invalid version string was deserialized correctly
+                    Assert::AreEqual(document->asset.version.c_str(), "2.0.0"); // Assert that the invalid version string was deserialized correctly
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, SchemaFlagsDisableSchemaAsset)
                 {
                     // SchemaFlags::DisableSchemaAsset - disables asset schema validation only
-                    auto document = Deserialize(asset_invalid_version, DeserializeFlags::None, SchemaFlags::DisableSchemaAsset);
+                    auto document = Deserializer::Deserialize(asset_invalid_version, SchemaFlags::DisableSchemaAsset);
 
-                    Assert::AreEqual(document.asset.version.c_str(), "2.0.0"); // Assert that the invalid version string was deserialized correctly
+                    Assert::AreEqual(document->asset.version.c_str(), "2.0.0"); // Assert that the invalid version string was deserialized correctly
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFTests, SchemaFlagsDisableSchemaNode)
                 {
                     // SchemaFlags::DisableSchemaAsset - disables asset schema validation only
-                    auto document = Deserialize(node_invalid_children, DeserializeFlags::None, SchemaFlags::DisableSchemaNode);
+                    auto document = Deserializer::Deserialize(node_invalid_children, SchemaFlags::DisableSchemaNode);
 
-                    Assert::IsTrue(document.nodes.Size() == 1U);
-                    Assert::IsTrue(document.nodes.Front().children.empty()); // Assert that the node has no children
+                    Assert::IsTrue(document->nodes.Size() == 1U);
+                    Assert::IsTrue(document->nodes.Front().children.empty()); // Assert that the node has no children
                 }
             };
         }

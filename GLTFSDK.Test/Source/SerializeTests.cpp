@@ -30,10 +30,10 @@ namespace
     "asset": {
         "version": "2.0"
     },
+    "scene": 0,
     "scenes": [
         {}
-    ],
-    "scene": 0
+    ]
 })";
 
     const char* c_expectedDefaultDocumentAndNonDefaultScene = R"({
@@ -49,10 +49,10 @@ namespace
     "asset": {
         "version": "2.0"
     },
+    "scene": 0,
     "scenes": [
         {}
-    ],
-    "scene": 0
+    ]
 })";
 }
 
@@ -66,45 +66,45 @@ namespace Microsoft
             {
                 GLTFSDK_TEST_METHOD(SerializeTests, SerializeNodeMatrixTransform)
                 {
-                    Document originalDoc;
+                    auto originalDoc = Document::create();
                     Scene sc; sc.id = "0";
                     sc.nodes = { "0" };
-                    originalDoc.SetDefaultScene(std::move(sc));
+                    originalDoc->SetDefaultScene(std::move(sc));
                     std::array<float, 16> matrixData; std::fill(matrixData.begin(), matrixData.end(), 1.0f);
                     Matrix4 mat4; mat4.values = matrixData;
                     Node matrixNode; matrixNode.id = "0"; matrixNode.name = "matrixNode";
                     matrixNode.matrix = mat4;
-                    originalDoc.nodes.Append(std::move(matrixNode));
-                    auto outputString = Serialize(originalDoc);
-                    auto twoPassDoc = Deserialize(outputString);
-                    Assert::IsTrue(twoPassDoc == originalDoc);
+                    originalDoc->nodes.Append(std::move(matrixNode));
+                    auto outputString = Serializer::Serialize(originalDoc);
+                    auto twoPassDoc = Deserializer::Deserialize(outputString);
+                    Assert::IsTrue(*twoPassDoc == *originalDoc);
                 }
 
                 GLTFSDK_TEST_METHOD(SerializeTests, SerializeNodeTRSTransform)
                 {
-                    Document originalDoc;
+                    auto originalDoc = Document::create();
                     Scene sc; sc.id = "0";
                     sc.nodes = { "0" };
-                    originalDoc.SetDefaultScene(std::move(sc));
+                    originalDoc->SetDefaultScene(std::move(sc));
                     Vector3 translation = { 1.0f, 1.0f, 1.0f };
                     Vector3 scaling = { 0.1f, 0.42f, 0.133f };
                     Node trsNode; trsNode.id = "0"; trsNode.name = "trsNode";
                     trsNode.translation = translation;
                     trsNode.scale = scaling;
-                    originalDoc.nodes.Append(std::move(trsNode));
-                    auto outputString = Serialize(originalDoc);
-                    auto twoPassDoc = Deserialize(outputString);
-                    Assert::IsTrue(twoPassDoc == originalDoc);
+                    originalDoc->nodes.Append(std::move(trsNode));
+                    auto outputString = Serializer::Serialize(originalDoc);
+                    auto twoPassDoc = Deserializer::Deserialize(outputString);
+                    Assert::IsTrue(*twoPassDoc == *originalDoc);
                 }
 
                 GLTFSDK_TEST_METHOD(SerializeTests, SerializeNodeInvalidTransform)
                 {
                     Assert::ExpectException<DocumentException>([]()
                     {
-                        Document originalDoc;
+                    auto originalDoc = Document::create();
                         Scene sc; sc.id = "0";
                         sc.nodes = { "0" };
-                        originalDoc.SetDefaultScene(std::move(sc));
+                        originalDoc->SetDefaultScene(std::move(sc));
                         Vector3 translation = { 1.0f, 1.0f, 1.0f };
                         Vector3 scaling = { 0.1f, 0.42f, 0.133f };
                         std::array<float, 16> matrixData; std::fill(matrixData.begin(), matrixData.end(), 1.0f);
@@ -113,8 +113,8 @@ namespace Microsoft
                         badNode.translation = translation;
                         badNode.scale = scaling;
                         badNode.matrix = mat4;
-                        originalDoc.nodes.Append(std::move(badNode));
-                        auto outputString = Serialize(originalDoc);
+                        originalDoc->nodes.Append(std::move(badNode));
+                        auto outputString = Serializer::Serialize(originalDoc);
                     });
                 }
 
@@ -166,49 +166,49 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(SerializeTests, DefaultDocument)
                 {
-                    Document doc;
+                    auto doc = Document::create();
 
-                    const auto output = Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocument);
                 }
 
                 GLTFSDK_TEST_METHOD(SerializeTests, DefaultDocumentAndScene)
                 {
-                    Document doc;
-                    doc.scenes.Append(Scene(), AppendIdPolicy::GenerateOnEmpty);
+                    auto doc = Document::create();
+                    doc->scenes.Append(Scene(), AppendIdPolicy::GenerateOnEmpty);
 
-                    const auto output = Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndScene);
                 }
 
                 GLTFSDK_TEST_METHOD(SerializeTests, DefaultDocumentAndSceneAsDefault)
                 {
-                    Document doc;
-                    doc.SetDefaultScene(Scene(), AppendIdPolicy::GenerateOnEmpty);
+                    auto doc = Document::create();
+                    doc->SetDefaultScene(Scene(), AppendIdPolicy::GenerateOnEmpty);
 
-                    const auto output = Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndSceneAsDefault);
                 }
 
                 GLTFSDK_TEST_METHOD(SerializeTests, DefaultDocumentAndNonDefaultScene)
                 {
-                    Document doc;
+                    auto doc = Document::create();
                     Scene scene;
                     scene.id = "foo";
-                    doc.scenes.Append(std::move(scene));
+                    doc->scenes.Append(std::move(scene));
 
-                    const auto output = Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndNonDefaultScene);
                 }
 
                 GLTFSDK_TEST_METHOD(SerializeTests, DefaultDocumentAndNonDefaultSceneAsDefault)
                 {
-                    Document doc;
+                    auto doc = Document::create();
                     Scene scene;
                     scene.id = "foo";
-                    doc.SetDefaultScene(std::move(scene));
+                    doc->SetDefaultScene(std::move(scene));
 
-                    const auto output = Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndNonDefaultSceneAsDefault);
                 }
 
@@ -217,15 +217,15 @@ namespace Microsoft
                     Scene scene;
                     scene.id = "foo";
 
-                    Document doc;
-                    doc.scenes.Append(std::move(scene));
-                    doc.defaultSceneId = "bar";
+                    auto doc = Document::create();
+                    doc->scenes.Append(std::move(scene));
+                    doc->defaultSceneId = "bar";
 
                     Assert::ExpectException<GLTFException>([&doc]
                     {
                         try
                         {
-                            Serialize(doc);
+                            Serializer::Serialize(doc);
                         }
                         catch (const GLTFException& ex)
                         {

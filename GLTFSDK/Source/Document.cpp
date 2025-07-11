@@ -52,6 +52,30 @@ const Scene& Document::SetDefaultScene(Scene&& scene, AppendIdPolicy policy)
     return defaultScene;
 }
 
+void Document::serialize(nlohmann::json &json) const {
+    json["asset"] = asset;
+    if (accessors.Size()>0) json["accessors"] = accessors;
+    if (animations.Size()>0) json["animations"] = animations;
+    if (bufferViews.Size()>0) json["bufferViews"] = bufferViews;
+    if (buffers.Size()>0) json["buffers"] = buffers;
+    if (cameras.Size()>0) json["cameras"] = cameras;
+    if (images.Size()>0) json["images"] = images;
+    if (materials.Size()>0) json["materials"] = materials;
+    if (meshes.Size()>0) json["meshes"] = meshes;
+    if (nodes.Size()>0) json["nodes"] = nodes;
+    if (samplers.Size()>0) json["samplers"] = samplers;
+    if (scenes.Size()>0) json["scenes"] = scenes;
+    if (skins.Size()>0) json["skins"] = skins;
+    if (textures.Size()>0) json["textures"] = textures;
+    if (HasDefaultScene()) json["scene"] = scenes.GetIndex(defaultSceneId);
+    if (!gltfDocument->extensionsUsed.empty()) json["extensionsUsed"] = gltfDocument->extensionsUsed;
+    for (auto& extensionName : gltfDocument->extensionsRequired) {
+        if (!gltfDocument->extensionsUsed.contains(extensionName))
+            throw GLTFException("required extension '" + extensionName + "' not present in extensionsUsed.");
+    }
+    if (!gltfDocument->extensionsRequired.empty()) json["extensionsRequired"] = gltfDocument->extensionsRequired;
+}
+
 bool Document::operator==(const Document& rhs) const
 {
     return this->asset == rhs.asset

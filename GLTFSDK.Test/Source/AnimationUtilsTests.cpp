@@ -59,8 +59,8 @@ namespace Microsoft
 
                     auto accessor = bufferBuilder.AddAccessor(input, { TYPE_SCALAR, componentType->second, normalized });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     // Verify that we read back what's expected
                     std::stringstream ss;
@@ -70,13 +70,13 @@ namespace Microsoft
 
                     // Accessor
                     GLTFResourceReader reader(readerWriter);
-                    auto output = AnimationUtils::GetMorphWeights(doc, reader, accessor);
+                    auto output = AnimationUtils::GetMorphWeights(*doc, reader, accessor);
                     AreEqual(expectedOutput, output, msg.c_str());
 
                     // Sampler
                     AnimationSampler animationSampler;
                     animationSampler.outputAccessorId = accessor.id;
-                    output = AnimationUtils::GetMorphWeights(doc, reader, animationSampler);
+                    output = AnimationUtils::GetMorphWeights(*doc, reader, animationSampler);
                     AreEqual(expectedOutput, output, msg.c_str());
                 }
 
@@ -106,8 +106,8 @@ namespace Microsoft
 
                     auto accessor = bufferBuilder.AddAccessor(input, { TYPE_VEC4, componentType->second, normalized });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     // Verify that we read back what's expected
                     std::stringstream ss;
@@ -117,13 +117,13 @@ namespace Microsoft
 
                     // Accessor
                     GLTFResourceReader reader(readerWriter);
-                    auto output = AnimationUtils::GetRotations(doc, reader, accessor);
+                    auto output = AnimationUtils::GetRotations(*doc, reader, accessor);
                     AreEqual(expectedOutput, output, msg.c_str());
 
                     // Sampler
                     AnimationSampler animationSampler;
                     animationSampler.outputAccessorId = accessor.id;
-                    output = AnimationUtils::GetRotations(doc, reader, animationSampler);
+                    output = AnimationUtils::GetRotations(*doc, reader, animationSampler);
                     AreEqual(expectedOutput, output, msg.c_str());
                 }
             }
@@ -141,11 +141,11 @@ namespace Microsoft
                     std::vector<float> input = { 0.000f, 0.100f, 0.200f, 0.300f };
                     auto accessor = bufferBuilder.AddAccessor(input, { TYPE_SCALAR, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = AnimationUtils::GetKeyframeTimes(doc, reader, accessor);
+                    auto output = AnimationUtils::GetKeyframeTimes(*doc, reader, accessor);
 
                     AreEqual(input, output);
                 }
@@ -166,11 +166,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(input, { TYPE_MAT4, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = AnimationUtils::GetInverseBindMatrices(doc, reader, accessor);
+                    auto output = AnimationUtils::GetInverseBindMatrices(*doc, reader, accessor);
 
                     AreEqual(input, output);
                 }
@@ -188,13 +188,13 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(input, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     // Accessor
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = AnimationUtils::GetTranslations(doc, reader, accessor);
+                    auto output = AnimationUtils::GetTranslations(*doc, reader, accessor);
 
                     AreEqual(input, output);
 
@@ -202,7 +202,7 @@ namespace Microsoft
 
                     AnimationSampler animationSampler;
                     animationSampler.outputAccessorId = accessor.id;
-                    output = AnimationUtils::GetTranslations(doc, reader, animationSampler);
+                    output = AnimationUtils::GetTranslations(*doc, reader, animationSampler);
 
                     AreEqual(input, output);
                 }
@@ -220,13 +220,13 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(input, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     // Accessor
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = AnimationUtils::GetScales(doc, reader, accessor);
+                    auto output = AnimationUtils::GetScales(*doc, reader, accessor);
 
                     AreEqual(input, output);
 
@@ -234,7 +234,7 @@ namespace Microsoft
 
                     AnimationSampler animationSampler;
                     animationSampler.outputAccessorId = accessor.id;
-                    output = AnimationUtils::GetScales(doc, reader, animationSampler);
+                    output = AnimationUtils::GetScales(*doc, reader, animationSampler);
 
                     AreEqual(input, output);
                 }

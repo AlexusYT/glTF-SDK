@@ -68,8 +68,8 @@ namespace Microsoft
                         Assert::IsTrue(IsUriBase64(buffer.uri, itBegin, itEnd), L"Data uri was not recognized as such");
                         Assert::IsTrue(Base64Decode(test.second) == test.first, L"Decoded data uri doesn't match expected values");
 
-                        Document gltfDocument;
-                        gltfDocument.buffers.Append(buffer);
+                        auto gltfDocument = Document::create();
+                        gltfDocument->buffers.Append(buffer);
 
                         for (size_t i = 0; i < test.first.size(); ++i)
                         {
@@ -82,7 +82,7 @@ namespace Microsoft
                                 bufferView.byteLength = j - i;
 
                                 auto resultExpected = std::vector<uint8_t>(test.first.begin() + i, test.first.begin() + j);
-                                auto resultActual = gltfResourceReader.ReadBinaryData<uint8_t>(gltfDocument, bufferView);
+                                auto resultActual = gltfResourceReader.ReadBinaryData<uint8_t>(*gltfDocument, bufferView);
 
                                 Assert::IsTrue(resultExpected == resultActual, L"Decoded data uri range doesn't match expected values");
                             }
@@ -155,34 +155,34 @@ namespace Microsoft
                     accessor4.componentType = ComponentType::COMPONENT_BYTE;
                     accessor4.type = AccessorType::TYPE_SCALAR;
 
-                    Document gltfDocument;
+                    auto gltfDocument = Document::create();
 
-                    gltfDocument.buffers.Append(buffer);
-                    gltfDocument.bufferViews.Append(bufferView);
+                    gltfDocument->buffers.Append(buffer);
+                    gltfDocument->bufferViews.Append(bufferView);
 
-                    gltfDocument.accessors.Append(accessor1);
-                    gltfDocument.accessors.Append(accessor2);
-                    gltfDocument.accessors.Append(accessor3);
-                    gltfDocument.accessors.Append(accessor4);
+                    gltfDocument->accessors.Append(accessor1);
+                    gltfDocument->accessors.Append(accessor2);
+                    gltfDocument->accessors.Append(accessor3);
+                    gltfDocument->accessors.Append(accessor4);
 
                     GLTFResourceReader resourceReader(std::make_shared<StreamReaderWriter>());
 
-                    auto a1Actual = resourceReader.ReadBinaryData<int8_t>(gltfDocument, accessor1);
+                    auto a1Actual = resourceReader.ReadBinaryData<int8_t>(*gltfDocument, accessor1);
                     auto a1Expected = std::vector<int8_t>{ '1', '1', '1', '1' };
 
                     Assert::IsTrue(a1Expected == a1Actual, L"Unexpected result reading interleaved accessor data from base64 encoded data uri");
 
-                    auto a2Actual = resourceReader.ReadBinaryData<int8_t>(gltfDocument, accessor2);
+                    auto a2Actual = resourceReader.ReadBinaryData<int8_t>(*gltfDocument, accessor2);
                     auto a2Expected = std::vector<int8_t>{ '2', '2', '2', '2' };
 
                     Assert::IsTrue(a2Expected == a2Actual, L"Unexpected result reading interleaved accessor data from base64 encoded data uri");
 
-                    auto a3Actual = resourceReader.ReadBinaryData<int8_t>(gltfDocument, accessor3);
+                    auto a3Actual = resourceReader.ReadBinaryData<int8_t>(*gltfDocument, accessor3);
                     auto a3Expected = std::vector<int8_t>{ '3', '3', '3', '3' };
 
                     Assert::IsTrue(a3Expected == a3Actual, L"Unexpected result reading interleaved accessor data from base64 encoded data uri");
 
-                    auto a4Actual = resourceReader.ReadBinaryData<int8_t>(gltfDocument, accessor4);
+                    auto a4Actual = resourceReader.ReadBinaryData<int8_t>(*gltfDocument, accessor4);
                     auto a4Expected = std::vector<int8_t>{ '4', '4', '4', '4' };
 
                     Assert::IsTrue(a4Expected == a4Actual, L"Unexpected result reading interleaved accessor data from base64 encoded data uri");

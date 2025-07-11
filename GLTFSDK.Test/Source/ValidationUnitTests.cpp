@@ -21,23 +21,23 @@ namespace Microsoft
         {
             namespace
             {
-                Document ReadAsset(const char* path)
+                std::shared_ptr<Document> ReadAsset(const char* path)
                 {
                     const auto inputJson = ReadLocalJson(path);
-                    auto doc = Deserialize(inputJson);
+                    auto doc = Deserializer::Deserialize(inputJson);
                     return doc;
                 }
 
                 void ReadAndValidate(const char* path)
                 {
                     auto doc = ReadAsset(path);
-                    Validation::Validate(doc);
+                    Validation::Validate(*doc);
                 }
 
-                void ExpectValidationFail(const Document& doc)
+                void ExpectValidationFail(const std::shared_ptr<Document>& doc)
                 {
                     Assert::ExpectException<ValidationException>([&doc]{
-                        Validation::Validate(doc);
+                        Validation::Validate(*doc);
                     });
                 }
             }
@@ -111,17 +111,17 @@ namespace Microsoft
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, TestDraco_Validation)
                 {
                     const auto inputJson = ReadLocalJson(c_dracoBox);
-                    auto doc = Deserialize(inputJson);
+                    auto doc = Deserializer::Deserialize(inputJson);
 
-                    Assert::AreEqual(doc.buffers.Size(), size_t(1));
-                    Assert::AreEqual(doc.bufferViews.Size(), size_t(1));
-                    Assert::AreEqual(doc.accessors.Size(), size_t(3));
-                    for (const auto& accessor : doc.accessors.Elements())
+                    Assert::AreEqual(doc->buffers.Size(), size_t(1));
+                    Assert::AreEqual(doc->bufferViews.Size(), size_t(1));
+                    Assert::AreEqual(doc->accessors.Size(), size_t(3));
+                    for (const auto& accessor : doc->accessors.Elements())
                     {
                         Assert::IsTrue(accessor.bufferViewId.empty());
                     }
 
-                    Validation::Validate(doc);
+                    Validation::Validate(*doc);
                 }
 
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, Validate_MeshPrimitive_00)
@@ -207,68 +207,68 @@ namespace Microsoft
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, Validate_Invalid_Unindexed_Lines)
                 {
                     auto doc = ReadAsset(c_meshPrimitiveMode_01);
-                    auto accessor = doc.accessors[doc.meshes.Front().primitives.front().GetAttributeAccessorId(ACCESSOR_POSITION)];
+                    auto accessor = doc->accessors[doc->meshes.Front().primitives.front().GetAttributeAccessorId(ACCESSOR_POSITION)];
 
                     accessor.count = 1;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
 
                     accessor.count = 3;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
                 }
 
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, Validate_Invalid_Unindexed_Line_Loop)
                 {
                     auto doc = ReadAsset(c_meshPrimitiveMode_02);
-                    auto accessor = doc.accessors[doc.meshes.Front().primitives.front().GetAttributeAccessorId(ACCESSOR_POSITION)];
+                    auto accessor = doc->accessors[doc->meshes.Front().primitives.front().GetAttributeAccessorId(ACCESSOR_POSITION)];
 
                     accessor.count = 1;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
                 }
 
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, Validate_Invalid_Unindexed_Line_Strip)
                 {
                     auto doc = ReadAsset(c_meshPrimitiveMode_03);
-                    auto accessor = doc.accessors[doc.meshes.Front().primitives.front().GetAttributeAccessorId(ACCESSOR_POSITION)];
+                    auto accessor = doc->accessors[doc->meshes.Front().primitives.front().GetAttributeAccessorId(ACCESSOR_POSITION)];
 
                     accessor.count = 1;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
                 }
 
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, Validate_Invalid_Indexed_Lines)
                 {
                     auto doc = ReadAsset(c_meshPrimitiveMode_08);
-                    auto accessor = doc.accessors[doc.meshes.Front().primitives.front().indicesAccessorId];
+                    auto accessor = doc->accessors[doc->meshes.Front().primitives.front().indicesAccessorId];
 
                     accessor.count = 1;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
 
                     accessor.count = 3;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
                 }
 
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, Validate_Invalid_Indexed_Line_Loop)
                 {
                     auto doc = ReadAsset(c_meshPrimitiveMode_09);
-                    auto accessor = doc.accessors[doc.meshes.Front().primitives.front().indicesAccessorId];
+                    auto accessor = doc->accessors[doc->meshes.Front().primitives.front().indicesAccessorId];
 
                     accessor.count = 1;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
                 }
 
                 GLTFSDK_TEST_METHOD(ValidationUnitTests, Validate_Invalid_Indexed_Line_Strip)
                 {
                     auto doc = ReadAsset(c_meshPrimitiveMode_10);
-                    auto accessor = doc.accessors[doc.meshes.Front().primitives.front().indicesAccessorId];
+                    auto accessor = doc->accessors[doc->meshes.Front().primitives.front().indicesAccessorId];
 
                     accessor.count = 1;
-                    doc.accessors.Replace(accessor);
+                    doc->accessors.Replace(accessor);
                     ExpectValidationFail(doc);
                 }
             };

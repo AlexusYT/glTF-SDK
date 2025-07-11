@@ -33,11 +33,11 @@ namespace Microsoft
                     std::vector<uint8_t> indices = { 0, 1, 2, 3, 4, 5, 6, UINT8_MAX };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_BYTE });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetIndices16(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetIndices16(*doc, reader, accessor);
 
                     std::vector<uint16_t> expected = { 0, 1, 2, 3, 4, 5, 6, UINT8_MAX };
                     AreEqual(expected, output);
@@ -54,11 +54,11 @@ namespace Microsoft
                     std::vector<uint16_t> indices = { 0, 1, 2, 3, 4, 5, UINT8_MAX, UINT16_MAX };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetIndices16(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetIndices16(*doc, reader, accessor);
 
                     std::vector<uint16_t> expected = { 0, 1, 2, 3, 4, 5, UINT8_MAX, UINT16_MAX };
                     AreEqual(expected, output);
@@ -75,13 +75,13 @@ namespace Microsoft
                     std::vector<uint32_t> indices = { 0, 1, 2, 3, 4, UINT8_MAX, UINT16_MAX, UINT32_MAX};
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_INT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
                     Assert::ExpectException<GLTFException>([&doc, &reader, &accessor]()
                     {
-                        MeshPrimitiveUtils::GetIndices16(doc, reader, accessor);
+                        MeshPrimitiveUtils::GetIndices16(*doc, reader, accessor);
                     });
                 }
 
@@ -96,11 +96,11 @@ namespace Microsoft
                     std::vector<uint8_t> indices = { 0, 1, 2, 3, 4, 5, 6, UINT8_MAX };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_BYTE });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetIndices32(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetIndices32(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = { 0, 1, 2, 3, 4, 5, 6, UINT8_MAX };
                     AreEqual(expected, output);
@@ -117,11 +117,11 @@ namespace Microsoft
                     std::vector<uint16_t> indices = { 0, 1, 2, 3, 4, 5, UINT8_MAX, UINT16_MAX };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetIndices32(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetIndices32(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = { 0, 1, 2, 3, 4, 5, UINT8_MAX, UINT16_MAX };
                     AreEqual(expected, output);
@@ -138,11 +138,11 @@ namespace Microsoft
                     std::vector<uint32_t> indices = { 0, 1, 2, 3, 4, UINT8_MAX, UINT16_MAX, UINT32_MAX };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_INT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetIndices32(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetIndices32(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = { 0, 1, 2, 3, 4, UINT8_MAX, UINT16_MAX, UINT32_MAX };
                     AreEqual(expected, output);
@@ -159,11 +159,11 @@ namespace Microsoft
                     std::vector<float> positions = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f };
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetPositions(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetPositions(*doc, reader, accessor);
 
                     AreEqual(positions, output);
                 }
@@ -182,13 +182,13 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MorphTarget target;
                     target.positionsAccessorId = accessor.id;
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetPositions(doc, reader, target);
+                    auto output = MeshPrimitiveUtils::GetPositions(*doc, reader, target);
 
                     AreEqual(positions, output);
                 }
@@ -208,11 +208,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(normals, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetNormals(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetNormals(*doc, reader, accessor);
 
                     AreEqual(normals, output);
                 }
@@ -231,13 +231,13 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(normals, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MorphTarget target;
                     target.normalsAccessorId = accessor.id;
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetNormals(doc, reader, target);
+                    auto output = MeshPrimitiveUtils::GetNormals(*doc, reader, target);
 
                     AreEqual(normals, output);
                 }
@@ -256,11 +256,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(tangents, { TYPE_VEC4, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetTangents(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetTangents(*doc, reader, accessor);
 
                     AreEqual(tangents, output);
                 }
@@ -280,13 +280,13 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(tangents, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MorphTarget target;
                     target.tangentsAccessorId = accessor.id;
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetTangents(doc, reader, target);
+                    auto output = MeshPrimitiveUtils::GetTangents(*doc, reader, target);
 
                     AreEqual(tangents, output);
                 }
@@ -307,11 +307,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(texcoords, { TYPE_VEC2, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetTexCoords(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetTexCoords(*doc, reader, accessor);
 
                     AreEqual(texcoords, output);
                 }
@@ -332,11 +332,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(texcoords, { TYPE_VEC2, COMPONENT_UNSIGNED_BYTE, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetTexCoords(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetTexCoords(*doc, reader, accessor);
 
                     std::vector<float> expected = {
                         0.0980392173f,
@@ -367,11 +367,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(texcoords, { TYPE_VEC2, COMPONENT_UNSIGNED_SHORT, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetTexCoords(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetTexCoords(*doc, reader, accessor);
 
                     std::vector<float> expected = {
                         0.0991836414f,
@@ -401,11 +401,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(colors, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetColors(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetColors(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         4283249434,
@@ -430,11 +430,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(colors, { TYPE_VEC4, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetColors(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetColors(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         4283249434,
@@ -459,11 +459,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(colors, { TYPE_VEC3, COMPONENT_UNSIGNED_BYTE, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetColors(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetColors(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         4283118105,
@@ -488,11 +488,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(colors, { TYPE_VEC4, COMPONENT_UNSIGNED_BYTE, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetColors(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetColors(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         4283118105,
@@ -517,11 +517,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(colors, { TYPE_VEC3, COMPONENT_UNSIGNED_SHORT, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetColors(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetColors(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         4283183897,
@@ -546,11 +546,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(colors, { TYPE_VEC4, COMPONENT_UNSIGNED_SHORT, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetColors(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetColors(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         4283183897,
@@ -574,11 +574,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_VEC4, COMPONENT_UNSIGNED_BYTE });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetJointIndices32(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetJointIndices32(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         3840,
@@ -601,13 +601,13 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_VEC4, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
                     Assert::ExpectException<GLTFException>([&doc, &reader, &accessor]()
                     {
-                        MeshPrimitiveUtils::GetJointIndices32(doc, reader, accessor);
+                        MeshPrimitiveUtils::GetJointIndices32(*doc, reader, accessor);
                     });
                 }
 
@@ -625,11 +625,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_VEC4, COMPONENT_UNSIGNED_BYTE });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetJointIndices64(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetJointIndices64(*doc, reader, accessor);
 
                     std::vector<uint64_t> expected = {
                         983040,
@@ -652,11 +652,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_VEC4, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetJointIndices64(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetJointIndices64(*doc, reader, accessor);
 
                     std::vector<uint64_t> expected = {
                         4294901760,
@@ -681,11 +681,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(weights, { TYPE_VEC4, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetJointWeights32(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetJointWeights32(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         255,
@@ -712,11 +712,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(weights, { TYPE_VEC4, COMPONENT_UNSIGNED_BYTE, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetJointWeights32(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetJointWeights32(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         255,
@@ -743,11 +743,11 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(weights, { TYPE_VEC4, COMPONENT_UNSIGNED_SHORT, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto output = MeshPrimitiveUtils::GetJointWeights32(doc, reader, accessor);
+                    auto output = MeshPrimitiveUtils::GetJointWeights32(*doc, reader, accessor);
 
                     std::vector<uint32_t> expected = {
                         255,
@@ -775,8 +775,8 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -784,7 +784,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> indices =
@@ -794,7 +794,7 @@ namespace Microsoft
                         2, 3, 4
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(indices, outputIndices);
                 }
 
@@ -815,8 +815,8 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -824,7 +824,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> indices =
@@ -834,7 +834,7 @@ namespace Microsoft
                         0, 3, 4
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(indices, outputIndices);
                 }
 
@@ -859,8 +859,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -869,7 +869,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> triangulatedIndices =
@@ -878,7 +878,7 @@ namespace Microsoft
                         3, 2, 1
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(triangulatedIndices, outputIndices);
                 }
 
@@ -903,8 +903,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -913,7 +913,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> triangulatedIndices =
@@ -922,7 +922,7 @@ namespace Microsoft
                         0, 1, 2
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(triangulatedIndices, outputIndices);
                 }
 
@@ -955,8 +955,8 @@ namespace Microsoft
 
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -964,10 +964,10 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
-                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(*doc, reader, meshPrimitive);
 
                     const size_t expectedIndexCount = (numVertices - 2) * 3; // Two less triangles than the number of verts, 3 indices per triangle
                     Assert::AreEqual(outputIndices.size(), expectedIndexCount);
@@ -1012,8 +1012,8 @@ namespace Microsoft
 
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -1021,10 +1021,10 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
-                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(*doc, reader, meshPrimitive);
 
                     const size_t expectedIndexCount = (numVertices - 2) * 3; // Two less triangles than the number of verts, 3 indices per triangle
                     Assert::AreEqual(outputIndices.size(), expectedIndexCount);
@@ -1056,8 +1056,8 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -1065,7 +1065,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> expectedIndices =
@@ -1075,7 +1075,7 @@ namespace Microsoft
                         2, 3
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(expectedIndices, outputIndices);
                 }
 
@@ -1095,8 +1095,8 @@ namespace Microsoft
                     };
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -1104,7 +1104,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> expectedIndices =
@@ -1115,7 +1115,7 @@ namespace Microsoft
                         3, 0
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(expectedIndices, outputIndices);
                 }
 
@@ -1140,8 +1140,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1150,7 +1150,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> segmentedIndices =
@@ -1160,7 +1160,7 @@ namespace Microsoft
                         1, 2
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(segmentedIndices, outputIndices);
                 }
 
@@ -1185,8 +1185,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1195,7 +1195,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
                     std::vector<uint16_t> segmentedIndices =
@@ -1206,7 +1206,7 @@ namespace Microsoft
                         2, 0
                     };
 
-                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices16(*doc, reader, meshPrimitive);
                     AreEqual(segmentedIndices, outputIndices);
                 }
 
@@ -1239,8 +1239,8 @@ namespace Microsoft
 
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -1248,10 +1248,10 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
-                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices32(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices32(*doc, reader, meshPrimitive);
 
                     const size_t expectedIndexCount = (numVertices - 1) * 2; // One less line than the number of verts, 2 indices per segment
                     Assert::AreEqual(outputIndices.size(), expectedIndexCount);
@@ -1294,8 +1294,8 @@ namespace Microsoft
 
                     auto accessor = bufferBuilder.AddAccessor(positions, { TYPE_VEC3, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.attributes[ACCESSOR_POSITION] = accessor.id;
@@ -1303,10 +1303,10 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto outputPositions = MeshPrimitiveUtils::GetPositions(doc, reader, meshPrimitive);
+                    auto outputPositions = MeshPrimitiveUtils::GetPositions(*doc, reader, meshPrimitive);
                     AreEqual(positions, outputPositions);
 
-                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices32(doc, reader, meshPrimitive);
+                    auto outputIndices = MeshPrimitiveUtils::GetSegmentedIndices32(*doc, reader, meshPrimitive);
 
                     const size_t expectedIndexCount = numVertices * 2; // Same number of segments as verts, 2 indices per segment
                     Assert::AreEqual(outputIndices.size(), expectedIndexCount);
@@ -1499,8 +1499,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1508,7 +1508,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(doc, reader, meshPrimitive);
+                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseTriangulateIndices16(triangulatedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);
@@ -1527,8 +1527,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1536,7 +1536,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(doc, reader, meshPrimitive);
+                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices16(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseTriangulateIndices16(triangulatedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);
@@ -1555,8 +1555,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_INT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1564,7 +1564,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(doc, reader, meshPrimitive);
+                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseTriangulateIndices32(triangulatedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);
@@ -1583,8 +1583,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_INT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1592,7 +1592,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(doc, reader, meshPrimitive);
+                    auto triangulatedIndices = MeshPrimitiveUtils::GetTriangulatedIndices32(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseTriangulateIndices32(triangulatedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);
@@ -1611,8 +1611,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1620,7 +1620,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices16(doc, reader, meshPrimitive);
+                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices16(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseSegmentIndices16(segmentedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);
@@ -1639,8 +1639,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1648,7 +1648,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices16(doc, reader, meshPrimitive);
+                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices16(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseSegmentIndices16(segmentedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);
@@ -1667,8 +1667,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_INT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1676,7 +1676,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices32(doc, reader, meshPrimitive);
+                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices32(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseSegmentIndices32(segmentedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);
@@ -1695,8 +1695,8 @@ namespace Microsoft
                     };
                     auto indicesAccessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_INT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     MeshPrimitive meshPrimitive;
                     meshPrimitive.indicesAccessorId = indicesAccessor.id;
@@ -1704,7 +1704,7 @@ namespace Microsoft
 
                     GLTFResourceReader reader(readerWriter);
 
-                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices32(doc, reader, meshPrimitive);
+                    auto segmentedIndices = MeshPrimitiveUtils::GetSegmentedIndices32(*doc, reader, meshPrimitive);
                     auto outputIndices = MeshPrimitiveUtils::ReverseSegmentIndices32(segmentedIndices, meshPrimitive.mode);
 
                     AreEqual(outputIndices, indices);

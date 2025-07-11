@@ -7,7 +7,6 @@
 #include <GLTFSDK/Extension.h>
 #include <GLTFSDK/ExtensionHandlers.h>
 #include <GLTFSDK/ExtensionsKHR.h>
-#include <GLTFSDK/RapidJsonUtils.h>
 #include <GLTFSDK/Serialize.h>
 #include <GLTFSDK/SchemaValidation.h>
 
@@ -15,6 +14,8 @@
 #include "TestUtils.h"
 
 #include <fstream>
+#include <memory>
+#include <memory>
 
 using namespace glTF::UnitTest;
 
@@ -65,7 +66,13 @@ R"({
 
             return isEqual;
         }
+        friend void to_json(nlohmann::json& json, const TestExtension& pType) {
+            json["flag"] = pType.flag;
+        }
 
+        friend void from_json(const nlohmann::json& json, TestExtension& pType) {
+            json.at("flag").get_to(pType.flag);
+        }
         bool flag;
     };
 
@@ -100,31 +107,15 @@ R"({
         std::unordered_map<std::string, std::string> schemaUriMap;
     };
 
-    std::string SerializeTestExtension(const TestExtension& extension)
-    {
-        rapidjson::Document doc;
-
-        doc.SetObject();
-        doc.AddMember("flag", extension.flag, doc.GetAllocator());
-
-        rapidjson::StringBuffer sb;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-
-        doc.Accept(writer);
-
-        return sb.GetString();
+    nlohmann::json SerializeTestExtension(const TestExtension& extension) {
+        return extension;
     }
 
-    std::unique_ptr<Extension> DeserializeTestExtension(const std::string& json, bool isValidationRequired)
-    {
-        rapidjson::Document documentExtension = RapidJsonUtils::CreateDocumentFromString(json);
-
+    std::unique_ptr<Extension> DeserializeTestExtension(const nlohmann::json& json, bool isValidationRequired) {
         if (isValidationRequired)
-        {
-            ValidateDocumentAgainstSchema(documentExtension, TestExtensionSchemaUri, TextExtensionSchemaLocator::Create());
-        }
+            ValidateDocumentAgainstSchema(json, TestExtensionSchemaUri, TextExtensionSchemaLocator::Create());
 
-        return std::make_unique<TestExtension>(documentExtension["flag"].GetBool());
+        return std::make_unique<TestExtension>(json["flag"].get<bool>());
     }
 
     constexpr const char expectedExtensionAddHandler[] =
@@ -132,6 +123,14 @@ R"({
     "asset": {
         "version": "2.0"
     },
+    "extensions": {
+        "TestExtension": {
+            "flag": false
+        }
+    },
+    "extensionsUsed": [
+        "TestExtension"
+    ],
     "nodes": [
         {
             "extensions": {
@@ -141,26 +140,18 @@ R"({
             }
         }
     ],
+    "scene": 0,
     "scenes": [
         {
-            "nodes": [
-                0
-            ],
             "extensions": {
                 "TestExtension": {
                     "flag": true
                 }
-            }
+            },
+            "nodes": [
+                0
+            ]
         }
-    ],
-    "scene": 0,
-    "extensions": {
-        "TestExtension": {
-            "flag": false
-        }
-    },
-    "extensionsUsed": [
-        "TestExtension"
     ]
 })";
 
@@ -304,14 +295,14 @@ namespace Microsoft
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
                     const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                     // Serialize Document back to json
-                    auto outputJson = Serialize(doc, extensionSerializer);
-                    auto outputDoc = Deserialize(outputJson, extensionDeserializer);
+                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output Documents
-                    Assert::IsTrue(doc == outputDoc, L"Input gltf and output gltf are not equal");
+                    Assert::IsTrue(*doc == *outputDoc, L"Input gltf and output gltf are not equal");
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_RoundTrip_And_Equality_Draco)
@@ -321,13 +312,13 @@ namespace Microsoft
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
                     const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
-                    Assert::AreEqual(doc.meshes.Size(), size_t(1));
-                    Assert::AreEqual(doc.meshes[0].primitives.size(), size_t(1));
-                    Assert::AreEqual(doc.meshes[0].primitives[0].GetExtensions().size(), size_t(1));
+                    Assert::AreEqual(doc->meshes.Size(), size_t(1));
+                    Assert::AreEqual(doc->meshes[0].primitives.size(), size_t(1));
+                    Assert::AreEqual(doc->meshes[0].primitives[0].GetExtensions().size(), size_t(1));
 
-                    auto draco = doc.meshes[0].primitives[0].GetExtension<KHR::MeshPrimitives::DracoMeshCompression>();
+                    auto draco = doc->meshes[0].primitives[0].GetExtension<KHR::MeshPrimitives::DracoMeshCompression>();
 
                     Assert::AreEqual<std::string>(draco.bufferViewId, "0");
                     Assert::AreEqual<size_t>(draco.attributes.size(), 2);
@@ -335,11 +326,11 @@ namespace Microsoft
                     Assert::AreEqual<size_t>(draco.attributes[ACCESSOR_NORMAL], 0);
 
                     // Serialize GLTFDocument back to json
-                    auto outputJson = Serialize(doc, extensionSerializer);
-                    auto outputDoc = Deserialize(outputJson, extensionDeserializer);
+                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output GLTFDocuments
-                    Assert::IsTrue(doc == outputDoc, L"Input gltf and output gltf are not equal");
+                    Assert::IsTrue(*doc == *outputDoc, L"Input gltf and output gltf are not equal");
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_GetExtension)
@@ -347,13 +338,13 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_cubeJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
-                    Assert::AreEqual(doc.materials.Size(), size_t(3));
-                    Assert::AreEqual(doc.materials[0].extensions.size(), size_t(0));
-                    Assert::AreEqual(doc.materials[0].GetExtensions().size(), size_t(1));
+                    Assert::AreEqual(doc->materials.Size(), size_t(3));
+                    Assert::AreEqual(doc->materials[0].extensions.size(), size_t(0));
+                    Assert::AreEqual(doc->materials[0].GetExtensions().size(), size_t(1));
 
-                    auto specGloss = doc.materials[0].GetExtension<KHR::Materials::PBRSpecularGlossiness>();
+                    auto specGloss = doc->materials[0].GetExtension<KHR::Materials::PBRSpecularGlossiness>();
 
                     Assert::IsTrue(specGloss.specularFactor == Color3(.0f, .0f, .0f));
                     Assert::IsTrue(specGloss.diffuseFactor == Color4(.49803921580314639f, .49803921580314639f, .49803921580314639f, 1.0f));
@@ -364,17 +355,17 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_cubeJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
-                    Assert::AreEqual(doc.materials.Size(), size_t(3));
-                    Assert::AreEqual(doc.materials[0].extensions.size(), size_t(0));
-                    Assert::AreEqual(doc.materials[0].GetExtensions().size(), size_t(1));
-                    Material mat = doc.materials[0];
+                    Assert::AreEqual(doc->materials.Size(), size_t(3));
+                    Assert::AreEqual(doc->materials[0].extensions.size(), size_t(0));
+                    Assert::AreEqual(doc->materials[0].GetExtensions().size(), size_t(1));
+                    Material mat = doc->materials[0];
                     Assert::AreEqual(mat.GetExtensions().size(), size_t(1));
 
                     mat.RemoveExtension<KHR::Materials::PBRSpecularGlossiness>();
-                    doc.materials.Replace(mat);
-                    Assert::AreEqual(doc.materials[0].GetExtensions().size(), size_t(0));
+                    doc->materials.Replace(mat);
+                    Assert::AreEqual(doc->materials[0].GetExtensions().size(), size_t(0));
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_HasExtension)
@@ -395,14 +386,14 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_cubeJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
-                    Assert::AreEqual(doc.materials.Size(), size_t(3));
-                    Assert::AreEqual(doc.materials[0].extensions.size(), size_t(0));
-                    Assert::AreEqual(doc.materials[0].GetExtensions().size(), size_t(1));
+                    Assert::AreEqual(doc->materials.Size(), size_t(3));
+                    Assert::AreEqual(doc->materials[0].extensions.size(), size_t(0));
+                    Assert::AreEqual(doc->materials[0].GetExtensions().size(), size_t(1));
 
-                    Assert::IsTrue(doc.materials[0].HasExtension<KHR::Materials::PBRSpecularGlossiness>());
-                    Assert::IsFalse(doc.materials[0].HasExtension<NonExistentExtension>());
+                    Assert::IsTrue(doc->materials[0].HasExtension<KHR::Materials::PBRSpecularGlossiness>());
+                    Assert::IsFalse(doc->materials[0].HasExtension<NonExistentExtension>());
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_HasSpecGlossExtension)
@@ -410,11 +401,11 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_singleTriangleWithTextureJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
-                    Assert::IsTrue(doc.materials[0].HasExtension<KHR::Materials::PBRSpecularGlossiness>());
+                    Assert::IsTrue(doc->materials[0].HasExtension<KHR::Materials::PBRSpecularGlossiness>());
 
-                    auto& specGloss = doc.materials[0].GetExtension<KHR::Materials::PBRSpecularGlossiness>();
+                    auto& specGloss = doc->materials[0].GetExtension<KHR::Materials::PBRSpecularGlossiness>();
 
                     Assert::AreEqual(specGloss.diffuseTexture.textureId.c_str(), "0");
                     Assert::IsTrue(specGloss.specularFactor == Color3(.0f, .0f, .0f));
@@ -425,7 +416,7 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_textureTransformTestJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                     auto checkTextureInfo = [](
                         const Material& material, 
@@ -446,14 +437,14 @@ namespace Microsoft
                         Assert::IsTrue(textureTransform == expectedTextureTransform);
                     };
 
-                    Assert::IsTrue(doc.materials.Size() == 9);
+                    Assert::IsTrue(doc->materials.Size() == 9);
 
-                    checkTextureInfo(doc.materials[0], Vector2(0.5f, 0.0f), 0.0f, Vector2(1.0f, 1.0f)); // Note: texCoord not specified
-                    checkTextureInfo(doc.materials[1], Vector2(0.0f, 0.5f), 0.0f, Vector2(1.0f, 1.0f));
-                    checkTextureInfo(doc.materials[2], Vector2(0.5f, 0.5f), 0.0f, Vector2(1.0f, 1.0f));
-                    checkTextureInfo(doc.materials[3], Vector2(0.0f, 0.0f), 0.39269908169872415480783042290994f, Vector2(1.0f, 1.0f));
-                    checkTextureInfo(doc.materials[4], Vector2(0.0f, 0.0f), 0.0f, Vector2(1.5f, 1.5f));
-                    checkTextureInfo(doc.materials[5], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f));
+                    checkTextureInfo(doc->materials[0], Vector2(0.5f, 0.0f), 0.0f, Vector2(1.0f, 1.0f)); // Note: texCoord not specified
+                    checkTextureInfo(doc->materials[1], Vector2(0.0f, 0.5f), 0.0f, Vector2(1.0f, 1.0f));
+                    checkTextureInfo(doc->materials[2], Vector2(0.5f, 0.5f), 0.0f, Vector2(1.0f, 1.0f));
+                    checkTextureInfo(doc->materials[3], Vector2(0.0f, 0.0f), 0.39269908169872415480783042290994f, Vector2(1.0f, 1.0f));
+                    checkTextureInfo(doc->materials[4], Vector2(0.0f, 0.0f), 0.0f, Vector2(1.5f, 1.5f));
+                    checkTextureInfo(doc->materials[5], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f));
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_HasTextureTransformExtension_Normal)
@@ -461,7 +452,7 @@ namespace Microsoft
                   const auto inputJson = ReadLocalJson(c_textureTransformTestJson);
 
                   const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                  auto doc = Deserialize(inputJson, extensionDeserializer);
+                  auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                   auto checkTextureInfo = [](
                                              const Material& material,
@@ -482,9 +473,9 @@ namespace Microsoft
                     Assert::IsTrue(textureTransform == expectedTextureTransform);
                   };
 
-                  Assert::IsTrue(doc.materials.Size() == 9);
+                  Assert::IsTrue(doc->materials.Size() == 9);
 
-                  checkTextureInfo(doc.materials[0], Vector2(0.5f, 0.0f), 0.0f, Vector2(1.0f, 1.0f));
+                  checkTextureInfo(doc->materials[0], Vector2(0.5f, 0.0f), 0.0f, Vector2(1.0f, 1.0f));
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_HasTextureTransformExtension_Occlusion)
@@ -492,7 +483,7 @@ namespace Microsoft
                   const auto inputJson = ReadLocalJson(c_textureTransformTestJson);
 
                   const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                  auto doc = Deserialize(inputJson, extensionDeserializer);
+                  auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                   auto checkTextureInfo = [](
                                              const Material& material,
@@ -513,16 +504,16 @@ namespace Microsoft
                     Assert::IsTrue(textureTransform == expectedTextureTransform);
                   };
 
-                  Assert::IsTrue(doc.materials.Size() == 9);
+                  Assert::IsTrue(doc->materials.Size() == 9);
 
-                  checkTextureInfo(doc.materials[0], Vector2(0.5f, 0.0f), 0.0f, Vector2(1.0f, 1.0f));
+                  checkTextureInfo(doc->materials[0], Vector2(0.5f, 0.0f), 0.0f, Vector2(1.0f, 1.0f));
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_HasTextureTransformExtension_TexCoord)
                 {
                     // Ensure the optionality of the texCoord property is preserved
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    auto doc = Deserialize(extensionSchemaKHRTextureTransform_TexCoord, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(extensionSchemaKHRTextureTransform_TexCoord, extensionDeserializer);
 
                     auto checkTextureInfo = [](
                         const Material& material,
@@ -543,16 +534,16 @@ namespace Microsoft
                         Assert::IsTrue(textureTransform == expectedTextureTransform);
                     };
 
-                    Assert::IsTrue(doc.materials.Size() == 2);
+                    Assert::IsTrue(doc->materials.Size() == 2);
 
-                    checkTextureInfo(doc.materials[0], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f), 1234);
-                    checkTextureInfo(doc.materials[1], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f));
+                    checkTextureInfo(doc->materials[0], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f), 1234);
+                    checkTextureInfo(doc->materials[1], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f));
 
                     const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
-                    auto tt = Serialize(doc, extensionSerializer);
+                    auto tt = Serializer::Serialize(doc, extensionSerializer);
 
-                    auto roundTrippedDoc = Deserialize(tt, extensionDeserializer);
-                    Assert::IsTrue(doc == roundTrippedDoc, L"Input gltf and output gltf are not equal");
+                    auto roundTrippedDoc = Deserializer::Deserialize(tt, extensionDeserializer);
+                    Assert::IsTrue(*doc == *roundTrippedDoc, L"Input gltf and output gltf are not equal");
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_RoundTrip_And_Equality_TextureTransform)
@@ -562,14 +553,14 @@ namespace Microsoft
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
                     const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                     // Serialize GLTFDocument back to json
-                    auto outputJson = Serialize(doc, extensionSerializer);
-                    auto outputDoc = Deserialize(outputJson, extensionDeserializer);
+                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output GLTFDocuments
-                    Assert::IsTrue(doc == outputDoc, L"Input gltf and output gltf are not equal");
+                    Assert::IsTrue(*doc == *outputDoc, L"Input gltf and output gltf are not equal");
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, Extensions_Test_RoundTrip_And_Equality_TextureTransform_SGOnly)
@@ -580,14 +571,14 @@ namespace Microsoft
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
                     const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
-                    auto doc = Deserialize(inputJson, extensionDeserializer);
+                    auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                     // Serialize GLTFDocument back to json
-                    auto outputJson = Serialize(doc, extensionSerializer);
-                    auto outputDoc = Deserialize(outputJson, extensionDeserializer);
+                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output GLTFDocuments
-                    Assert::IsTrue(doc == outputDoc, L"Input gltf and output gltf are not equal");
+                    Assert::IsTrue(*doc == *outputDoc, L"Input gltf and output gltf are not equal");
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, ExtensionSerializerAddHandler)
@@ -602,27 +593,27 @@ namespace Microsoft
                     scene.nodes.push_back(node.id);
                     scene.SetExtension<TestExtension>(true);
 
-                    Document document;
+                    auto document = Document::create();
 
-                    document.nodes.Append(std::move(node));
-                    document.SetDefaultScene(std::move(scene), AppendIdPolicy::GenerateOnEmpty);
-                    document.SetExtension<TestExtension>(false);
-                    document.extensionsUsed.emplace(TestExtensionName);
+                    document->nodes.Append(std::move(node));
+                    document->SetDefaultScene(std::move(scene), AppendIdPolicy::GenerateOnEmpty);
+                    document->SetExtension<TestExtension>(false);
+                    document->extensionsUsed.emplace(TestExtensionName);
 
-                    ExtensionSerializer extensionSerializer;
+                    auto extensionSerializer = std::make_shared<ExtensionSerializer>();
 
                     size_t handlerCountDocument = 0;
                     size_t handlerCountScene = 0;
                     size_t handlerCountAll = 0;
 
-                    extensionSerializer.AddHandler<TestExtension, Document>(TestExtensionName,
+                    extensionSerializer->AddHandler<TestExtension, Document>(TestExtensionName,
                         [&handlerCountDocument](const TestExtension& extension, const Document&, const ExtensionSerializer& /*extensionSerializer*/)
                     {
                         ++handlerCountDocument;
                         return SerializeTestExtension(extension);
                     });
 
-                    extensionSerializer.AddHandler<TestExtension, Scene>(TestExtensionName,
+                    extensionSerializer->AddHandler<TestExtension, Scene>(TestExtensionName,
                         [&handlerCountScene](const TestExtension& extension, const Document&, const ExtensionSerializer& /*extensionSerializer*/)
                     {
                         ++handlerCountScene;
@@ -630,18 +621,18 @@ namespace Microsoft
                     });
 
                     // The 'all properties' handler will process the Node's extension
-                    extensionSerializer.AddHandler<TestExtension>(TestExtensionName,
+                    extensionSerializer->AddHandler<TestExtension>(TestExtensionName,
                         [&handlerCountAll](const TestExtension& extension, const Document&, const ExtensionSerializer& /*extensionSerializer*/)
                     {
                         ++handlerCountAll;
                         return SerializeTestExtension(extension);
                     });
 
-                    Assert::IsTrue(extensionSerializer.HasHandler<TestExtension, Document>());
-                    Assert::IsTrue(extensionSerializer.HasHandler<TestExtension, Scene>());
-                    Assert::IsTrue(extensionSerializer.HasHandler<TestExtension>());
+                    Assert::IsTrue(extensionSerializer->HasHandler<TestExtension, Document>());
+                    Assert::IsTrue(extensionSerializer->HasHandler<TestExtension, Scene>());
+                    Assert::IsTrue(extensionSerializer->HasHandler<TestExtension>());
 
-                    const auto actual = Serialize(document, extensionSerializer, SerializeFlags::Pretty);
+                    const auto actual = Serializer::Serialize(document, extensionSerializer, SerializeFlags::Pretty);
 
                     Assert::AreEqual(size_t(1), handlerCountDocument, L"Document extension serializer handler called an unexpected number of times");
                     Assert::AreEqual(size_t(1), handlerCountScene, L"Scene extension serializer handler called an unexpected number of times");
@@ -652,53 +643,53 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, ExtensionDeserializerAddHandler)
                 {
-                    ExtensionDeserializer extensionDeserializer;
+                    auto extensionDeserializer = std::make_shared<ExtensionDeserializer>();
 
                     size_t handlerCountDocument = 0;
                     size_t handlerCountScene = 0;
                     size_t handlerCountAll = 0;
 
-                    extensionDeserializer.AddHandler<TestExtension, Document>(TestExtensionName,
-                        [&handlerCountDocument](const std::string& json, const ExtensionDeserializer& /*extensionDeserializer*/)
+                    extensionDeserializer->AddHandler<TestExtension, Document>(TestExtensionName,
+                        [&handlerCountDocument](const nlohmann::json &json, std::shared_ptr<ExtensionDeserializer> /*extensionDeserializer*/)
                     {
                         ++handlerCountDocument;
                         return DeserializeTestExtension(json, false);
                     });
 
-                    extensionDeserializer.AddHandler<TestExtension, Scene>(TestExtensionName,
-                        [&handlerCountScene](const std::string& json, const ExtensionDeserializer& /*extensionDeserializer*/)
+                    extensionDeserializer->AddHandler<TestExtension, Scene>(TestExtensionName,
+                        [&handlerCountScene](const nlohmann::json &json, std::shared_ptr<ExtensionDeserializer> /*extensionDeserializer*/)
                     {
                         ++handlerCountScene;
                         return DeserializeTestExtension(json, false);
                     });
 
                     // The 'all properties' handler will process the Node's extension
-                    extensionDeserializer.AddHandler<TestExtension>(TestExtensionName,
-                        [&handlerCountAll](const std::string& json, const ExtensionDeserializer& /*extensionDeserializer*/)
+                    extensionDeserializer->AddHandler<TestExtension>(TestExtensionName,
+                        [&handlerCountAll](const nlohmann::json &json, std::shared_ptr<ExtensionDeserializer> /*extensionDeserializer*/)
                     {
                         ++handlerCountAll;
                         return DeserializeTestExtension(json, false);
                     });
 
-                    Assert::IsTrue(extensionDeserializer.HasHandler<TestExtension, Document>());
-                    Assert::IsTrue(extensionDeserializer.HasHandler<TestExtension, Scene>());
-                    Assert::IsTrue(extensionDeserializer.HasHandler<TestExtension>());
+                    Assert::IsTrue(extensionDeserializer->HasHandler<TestExtension, Document>());
+                    Assert::IsTrue(extensionDeserializer->HasHandler<TestExtension, Scene>());
+                    Assert::IsTrue(extensionDeserializer->HasHandler<TestExtension>());
 
-                    const Document document = Deserialize(expectedExtensionAddHandler, extensionDeserializer);
+                    const auto document = Deserializer::Deserialize(expectedExtensionAddHandler, extensionDeserializer);
 
                     Assert::AreEqual(size_t(1), handlerCountDocument, L"Document extension serializer handler called an unexpected number of times");
                     Assert::AreEqual(size_t(1), handlerCountScene, L"Scene extension serializer handler called an unexpected number of times");
                     Assert::AreEqual(size_t(1), handlerCountAll, L"Generic extension serializer handler called an unexpected number of times");
 
-                    Assert::IsTrue(document.HasExtension<TestExtension>(), L"Document is missing TestExtension instance");
-                    Assert::IsFalse(document.GetExtension<TestExtension>().flag, L"Document's TestExtension's flag property expected to be false");
+                    Assert::IsTrue(document->HasExtension<TestExtension>(), L"Document is missing TestExtension instance");
+                    Assert::IsFalse(document->GetExtension<TestExtension>().flag, L"Document's TestExtension's flag property expected to be false");
 
-                    const Scene& scene = document.GetDefaultScene();
+                    const Scene& scene = document->GetDefaultScene();
 
                     Assert::IsTrue(scene.HasExtension<TestExtension>(), L"Scene is missing TestExtension instance");
                     Assert::IsTrue(scene.GetExtension<TestExtension>().flag, L"Scene's TestExtension's flag property expected to be true");
 
-                    const Node& node = document.nodes.Get(scene.nodes.front());
+                    const Node& node = document->nodes.Get(scene.nodes.front());
 
                     Assert::IsTrue(node.HasExtension<TestExtension>(), L"Node is missing TestExtension instance");
                     Assert::IsTrue(node.GetExtension<TestExtension>().flag, L"Node's TestExtension's flag property expected to be true");
@@ -706,45 +697,45 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, ExtensionDeserializerSchemaLocatorValid)
                 {
-                    ExtensionDeserializer extensionDeserializer;
+                    auto extensionDeserializer = std::make_shared<ExtensionDeserializer>();
 
-                    extensionDeserializer.AddHandler<TestExtension>(TestExtensionName,
-                        [](const std::string& json, const ExtensionDeserializer& /*extensionDeserializer*/)
+                    extensionDeserializer->AddHandler<TestExtension>(TestExtensionName,
+                        [](const nlohmann::json &json, std::shared_ptr<ExtensionDeserializer> /*extensionDeserializer*/)
                     {
                         return DeserializeTestExtension(json, true); // Enable schema validation
                     });
 
-                    Assert::IsTrue(extensionDeserializer.HasHandler<TestExtension>());
+                    Assert::IsTrue(extensionDeserializer->HasHandler<TestExtension>());
 
-                    const Document document = Deserialize(extensionSchemaValid, extensionDeserializer);
+                    const auto document = Deserializer::Deserialize(extensionSchemaValid, extensionDeserializer);
 
-                    Assert::AreEqual(size_t(1), document.nodes.Size());
-                    Assert::IsTrue(document.nodes.Front().HasExtension<TestExtension>());
-                    Assert::IsTrue(document.nodes.Front().GetExtension<TestExtension>().flag);
+                    Assert::AreEqual(size_t(1), document->nodes.Size());
+                    Assert::IsTrue(document->nodes.Front().HasExtension<TestExtension>());
+                    Assert::IsTrue(document->nodes.Front().GetExtension<TestExtension>().flag);
                 }
 
                 GLTFSDK_TEST_METHOD(ExtensionsTests, ExtensionDeserializerSchemaLocatorInvalidNoFlag)
                 {
-                    ExtensionDeserializer extensionDeserializer;
+                    auto extensionDeserializer = std::make_shared<ExtensionDeserializer>();
 
-                    extensionDeserializer.AddHandler<TestExtension>(TestExtensionName,
-                        [](const std::string& json, const ExtensionDeserializer& /*extensionDeserializer*/)
+                    extensionDeserializer->AddHandler<TestExtension>(TestExtensionName,
+                        [](const nlohmann::json &json, std::shared_ptr<ExtensionDeserializer> /*extensionDeserializer*/)
                     {
                         return DeserializeTestExtension(json, true); // Enable schema validation
                     });
 
-                    Assert::IsTrue(extensionDeserializer.HasHandler<TestExtension>());
+                    Assert::IsTrue(extensionDeserializer->HasHandler<TestExtension>());
 
                     // Check that the extensionSchemaInvalidNoFlag glTF manifest throws the expected ValidationException
                     Assert::ExpectException<ValidationException>([&extensionDeserializer]()
                     {
-                        Deserialize(extensionSchemaInvalidNoFlag, extensionDeserializer);
+                        Deserializer::Deserialize(extensionSchemaInvalidNoFlag, extensionDeserializer);
                     });
 
                     // Check that the extensionSchemaInvalidUnknownProperty glTF manifest throws the expected ValidationException
                     Assert::ExpectException<ValidationException>([&extensionDeserializer]()
                     {
-                        Deserialize(extensionSchemaInvalidUnknownProperty, extensionDeserializer);
+                        Deserializer::Deserialize(extensionSchemaInvalidUnknownProperty, extensionDeserializer);
                     });
                 }
             };

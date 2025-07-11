@@ -407,12 +407,12 @@ namespace Microsoft
                     streamOutput->write(reinterpret_cast<char*>(&f1), sizeof(f1));
                     streamOutput->write(reinterpret_cast<char*>(&f2), sizeof(f2));
 
-                    Document gltfDoc = Deserialize(test_json);
+                    auto gltfDoc = Deserializer::Deserialize(test_json);
 
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(stream);
 
-                    auto accessor = gltfDoc.accessors.Get("0");
-                    auto accessorData = gltfResourceReader->ReadBinaryData<float>(gltfDoc, accessor);
+                    auto accessor = gltfDoc->accessors.Get("0");
+                    auto accessorData = gltfResourceReader->ReadBinaryData<float>(*gltfDoc, accessor);
 
                     Assert::AreEqual<size_t>(2U, accessorData.size());
                     Assert::AreEqual<float>(f1, accessorData[0]);
@@ -422,11 +422,11 @@ namespace Microsoft
                 GLTFSDK_TEST_METHOD(GLTFResourceReaderTests, TestReadBase64Image)
                 {
                     auto stream = std::make_shared<StreamReaderWriter>();
-                    Document gltfDoc = Deserialize(base64_json);
+                    auto gltfDoc = Deserializer::Deserialize(base64_json);
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(stream);
 
-                    auto img1 = gltfResourceReader->ReadBinaryData(gltfDoc, gltfDoc.images.Get("0"));
-                    auto img2 = gltfResourceReader->ReadBinaryData(gltfDoc, gltfDoc.images.Get("1"));
+                    auto img1 = gltfResourceReader->ReadBinaryData(*gltfDoc, gltfDoc->images.Get("0"));
+                    auto img2 = gltfResourceReader->ReadBinaryData(*gltfDoc, gltfDoc->images.Get("1"));
 
                     Assert::IsTrue(img1 == std::vector<uint8_t>{181, 183, 29, 105});
                     Assert::IsTrue(img2 == std::vector<uint8_t>{105, 183, 29, 106, 12, 161, 185, 183});
@@ -446,12 +446,12 @@ namespace Microsoft
 
                     streamOutput->write(reinterpret_cast<char*>(&inputBuffer), 16);
 
-                    Document gltfDoc = Deserialize(sparse_json_uint8);
+                    auto gltfDoc = Deserializer::Deserialize(sparse_json_uint8);
 
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(stream);
 
-                    auto accessor = gltfDoc.accessors.Get("0");
-                    auto output = gltfResourceReader->ReadBinaryData<uint8_t>(gltfDoc, accessor);
+                    auto accessor = gltfDoc->accessors.Get("0");
+                    auto output = gltfResourceReader->ReadBinaryData<uint8_t>(*gltfDoc, accessor);
 
                     Assert::IsTrue(output == expectedReadOutput);
                 }
@@ -470,12 +470,12 @@ namespace Microsoft
 
                     streamOutput->write(reinterpret_cast<char*>(&inputBuffer), 32);
 
-                    Document gltfDoc = Deserialize(sparse_json_uint16);
+                    auto gltfDoc = Deserializer::Deserialize(sparse_json_uint16);
 
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(streamReaderWriter);
 
-                    auto accessor = gltfDoc.accessors.Get("0");
-                    auto output = gltfResourceReader->ReadBinaryData<uint16_t>(gltfDoc, accessor);
+                    auto accessor = gltfDoc->accessors.Get("0");
+                    auto output = gltfResourceReader->ReadBinaryData<uint16_t>(*gltfDoc, accessor);
 
                     Assert::IsTrue(output == expectedReadOutput);
                 }
@@ -493,12 +493,12 @@ namespace Microsoft
 
                     streamOutput->write(reinterpret_cast<char*>(&inputBuffer), 64);
 
-                    Document gltfDoc = Deserialize(sparse_json_uint32);
+                    auto gltfDoc = Deserializer::Deserialize(sparse_json_uint32);
 
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(stream);
 
-                    auto accessor = gltfDoc.accessors.Get("0");
-                    auto output = gltfResourceReader->ReadBinaryData<uint32_t>(gltfDoc, accessor);
+                    auto accessor = gltfDoc->accessors.Get("0");
+                    auto output = gltfResourceReader->ReadBinaryData<uint32_t>(*gltfDoc, accessor);
 
                     Assert::IsTrue(output == expectedReadOutput);
                 }
@@ -520,12 +520,12 @@ namespace Microsoft
                     // expected sparse replacement output
                     std::vector<float> expectedReadOutput = { 1.0, 1.0, 3.0, 3.0, 1.0, 1.0, 3.0, 3.0, 1.0, 1.0 };
 
-                    Document gltfDoc = Deserialize(sparse_json_float);
+                    auto gltfDoc = Deserializer::Deserialize(sparse_json_float);
 
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(stream);
 
-                    auto accessor = gltfDoc.accessors.Get("0");
-                    auto output = gltfResourceReader->ReadBinaryData<float>(gltfDoc, accessor);
+                    auto accessor = gltfDoc->accessors.Get("0");
+                    auto output = gltfResourceReader->ReadBinaryData<float>(*gltfDoc, accessor);
 
                     Assert::IsTrue(output == expectedReadOutput);
                 }
@@ -544,12 +544,12 @@ namespace Microsoft
 
                     streamOutput->write(reinterpret_cast<char*>(&inputBuffer), 32);
 
-                    Document gltfDoc = Deserialize(sparse_json_interleaved);
+                    auto gltfDoc = Deserializer::Deserialize(sparse_json_interleaved);
 
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(stream);
 
-                    auto accessor = gltfDoc.accessors.Get("0");
-                    auto output = gltfResourceReader->ReadBinaryData<uint8_t>(gltfDoc, accessor);
+                    auto accessor = gltfDoc->accessors.Get("0");
+                    auto output = gltfResourceReader->ReadBinaryData<uint8_t>(*gltfDoc, accessor);
 
                     Assert::IsTrue(output == expectedReadOutput);
                 }
@@ -567,12 +567,12 @@ namespace Microsoft
 
                     streamOutput->write(reinterpret_cast<char*>(&inputBuffer), 6);
 
-                    Document gltfDoc = Deserialize(sparse_emptybufferview_json);
+                    auto gltfDoc = Deserializer::Deserialize(sparse_emptybufferview_json);
 
                     auto gltfResourceReader = std::make_unique<GLTFResourceReader>(stream);
 
-                    auto accessor = gltfDoc.accessors.Get("0");
-                    auto output = gltfResourceReader->ReadBinaryData<uint8_t>(gltfDoc, accessor);
+                    auto accessor = gltfDoc->accessors.Get("0");
+                    auto output = gltfResourceReader->ReadBinaryData<uint8_t>(*gltfDoc, accessor);
 
                     Assert::IsTrue(output == expectedReadOutput);
                 }
@@ -588,11 +588,11 @@ namespace Microsoft
                     std::vector<float> values = { 0.f, 1.f, -0.125f };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_FLOAT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(3U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -611,11 +611,11 @@ namespace Microsoft
                     std::vector<uint8_t> values = { 0, 1, 255 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_UNSIGNED_BYTE });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(3U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -634,11 +634,11 @@ namespace Microsoft
                     std::vector<uint8_t> values = { 0, 1, 255 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_UNSIGNED_BYTE, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(3U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -657,11 +657,11 @@ namespace Microsoft
                     std::vector<int8_t> values = { 0, 1, -1, 127, -127, -128 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_BYTE });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(6U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -683,11 +683,11 @@ namespace Microsoft
                     std::vector<int8_t> values = { 0, 1, -1, 127, -127, -128 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_BYTE, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(6U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -709,11 +709,11 @@ namespace Microsoft
                     std::vector<uint16_t> values = { 0, 1, 255, 65535 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(4U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -733,11 +733,11 @@ namespace Microsoft
                     std::vector<uint16_t> values = { 0, 1, 255, 65535 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_UNSIGNED_SHORT, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(4U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -757,11 +757,11 @@ namespace Microsoft
                     std::vector<int16_t> values = { 0, 1, -1, 32767, -32767, -32768 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_SHORT });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(6U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);
@@ -783,11 +783,11 @@ namespace Microsoft
                     std::vector<int16_t> values = { 0, 1, -1, 32767, -32767, -32768 };
                     auto accessor = bufferBuilder.AddAccessor(values, { TYPE_SCALAR, COMPONENT_SHORT, true });
 
-                    Document doc;
-                    bufferBuilder.Output(doc);
+                    auto doc = Document::create();
+                    bufferBuilder.Output(*doc);
 
                     GLTFResourceReader reader(readerWriter);
-                    auto data = reader.ReadFloatData(doc, accessor);
+                    auto data = reader.ReadFloatData(*doc, accessor);
 
                     Assert::AreEqual<size_t>(6U, data.size());
                     Assert::AreEqual<float>(data[0], 0.f);

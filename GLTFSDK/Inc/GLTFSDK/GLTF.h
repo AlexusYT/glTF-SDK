@@ -18,12 +18,18 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 namespace Microsoft
 {
     namespace glTF
     {
-        enum BufferViewTarget
+    class ExtensionSerializer;
+    struct Animation;
+    class ExtensionDeserializer;
+    class Document;
+
+    enum BufferViewTarget
         {
             ARRAY_BUFFER = 34962,
             ELEMENT_ARRAY_BUFFER = 34963
@@ -171,19 +177,46 @@ namespace Microsoft
 
         struct glTFProperty
         {
+        protected:
+            Document* gltfDocument{};
+        public:
             virtual ~glTFProperty() = default;
 
-            std::unordered_map<std::string, std::string> extensions;
+            std::unordered_map<std::string, nlohmann::json> extensions;
             std::string extras;
 
+
+
+            [[nodiscard]] Document* getGltfDocument() const { return gltfDocument; }
+
+            virtual void setGltfDocument(Document* pGltfDocument) {
+                gltfDocument = pGltfDocument;
+            }
+
+            friend void to_json(nlohmann::json& json, const glTFProperty& pType) {
+                if (!pType.extras.empty()) json["extras"] = nlohmann::json::parse(pType.extras);
+
+                if (pType.extensions.empty() && pType.registeredExtensions.empty()) return;
+                pType.serializeExtensions(json["extensions"]);
+            }
+
+            friend void from_json(const nlohmann::json& json, glTFProperty& pType) {
+
+                if (const auto& extensionsIt = json.find("extensions"); extensionsIt != json.end()){
+                    for (const auto& entry : extensionsIt.value().items()){
+                        pType.extensions.emplace(entry.key(), entry.value());
+                    }
+                }
+                if (auto iter = json.find("extras"); iter != json.end()) {
+                    pType.extras = iter.value().dump();
+                }
+            }
             template<typename TExt, typename ...TArgs>
-            void SetExtension(TArgs&& ...args)
-            {
+            void SetExtension(TArgs&& ...args) {
                 SetExtension(std::make_unique<TExt>(std::forward<TArgs>(args)...));
             }
 
-            void SetExtension(std::unique_ptr<Extension>&& extension)
-            {
+            void SetExtension(std::unique_ptr<Extension>&& extension) {
                 const auto& typeExpr = *extension; // Workaround for clang -Wpotentially-evaluated-expression
                 const auto& typeInfo = typeid(typeExpr);
 
@@ -191,62 +224,48 @@ namespace Microsoft
             }
 
             template<typename T>
-            const T& GetExtension() const
-            {
+            const T& GetExtension() const {
                 auto it = registeredExtensions.find(typeid(T));
-                if (it != registeredExtensions.end())
-                {
-                    return static_cast<T&>(*it->second.get());
-                }
+                if (it != registeredExtensions.end()) return static_cast<T&>(*it->second.get());
+
 
                 throw GLTFException(std::string("Could not find extension: ") + typeid(T).name());
             }
 
             template<typename T>
-            T& GetExtension()
-            {
+            T& GetExtension() {
                 auto it = registeredExtensions.find(typeid(T));
-                if (it != registeredExtensions.end())
-                {
-                    return static_cast<T&>(*it->second.get());
-                }
+                if (it != registeredExtensions.end()) return static_cast<T&>(*it->second.get());
 
                 throw GLTFException(std::string("Could not find extension: ") + typeid(T).name());
             }
 
-            std::vector<std::reference_wrapper<Extension>> GetExtensions() const
-            {
+            std::vector<std::reference_wrapper<Extension>> GetExtensions() const {
                 std::vector<std::reference_wrapper<Extension>> exts;
-
                 for (auto& registeredExt : registeredExtensions)
-                {
                     exts.push_back(*registeredExt.second);
-                }
-
                 return exts;
             }
 
             template<typename T>
-            bool HasExtension() const
-            {
+            bool HasExtension() const {
                 return registeredExtensions.find(typeid(T)) != registeredExtensions.end();
             }
 
-            bool HasUnregisteredExtension(const std::string& name) const
-            {
+            bool HasUnregisteredExtension(const std::string& name) const {
                 return extensions.find(name) != extensions.end();
             }
 
             template<typename T>
-            void RemoveExtension()
-            {
-                registeredExtensions.erase(typeid(T));
-            }
+            void RemoveExtension() { registeredExtensions.erase(typeid(T)); }
 
+            virtual void serializeExtensions(nlohmann::json& json) const;
+
+            virtual void deserializeExtensions(const std::shared_ptr<ExtensionDeserializer>& pDeserializer);
         protected:
             glTFProperty() = default;
 
-            glTFProperty(const glTFProperty& other) : extensions(other.extensions), extras(other.extras)
+            glTFProperty(const glTFProperty& other) : gltfDocument(other.gltfDocument), extensions(other.extensions), extras(other.extras)
             {
                 for(const auto& ext : other.registeredExtensions)
                 {
@@ -317,10 +336,21 @@ namespace Microsoft
                     && lhs.name == rhs.name
                     && glTFProperty::Equals(lhs, rhs);
             }
+
+            friend void to_json(nlohmann::json& json, const glTFChildOfRootProperty& accessor) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(accessor));
+                if (!accessor.name.empty())json["name"] = accessor.name;
+            }
+
+            friend void from_json(const nlohmann::json& json, glTFChildOfRootProperty& accessor) {
+                nlohmann::from_json(json, static_cast<glTFProperty&>(accessor));
+                accessor.name = json.value("name", "");
+            }
         };
 
         struct BufferView : glTFChildOfRootProperty
         {
+        public:
             std::string bufferId;
             size_t byteOffset = 0U;
             size_t byteLength = 0U;
@@ -341,13 +371,30 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            void serialize(nlohmann::json& json) const;
+
+            void deserialize(const nlohmann::json& json);
+
+            friend void to_json(nlohmann::json& json, const BufferView& type) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(type));
+                type.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, BufferView& type) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(type));
+                type.deserialize(json);
+            }
+
         };
 
         struct Accessor : glTFChildOfRootProperty
         {
+        public:
             // TODO: Sparse is glTFProperty
             struct Sparse
             {
+                Document* gltfDocument;
                 Sparse() :
                     count(0U),
                     indicesComponentType(COMPONENT_UNKNOWN),
@@ -379,6 +426,19 @@ namespace Microsoft
                 {
                     return !operator==(rhs);
                 }
+
+                void serialize(nlohmann::json& json) const;
+
+                void deserialize(const nlohmann::json& json);
+
+                friend void to_json(nlohmann::json& json, const Sparse& sparseT) {
+                    sparseT.serialize(json);
+                }
+
+                friend void from_json(const nlohmann::json& json, Sparse& sparseT) {
+                    sparseT.deserialize(json);
+                }
+
             };
 
             std::string bufferViewId;
@@ -392,6 +452,25 @@ namespace Microsoft
             std::vector<float> min;
 
             Sparse sparse;
+
+            void serialize(nlohmann::json& json) const;
+
+            void deserialize(const nlohmann::json& json);
+
+            friend void to_json(nlohmann::json& json, const Accessor& accessor) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(accessor));
+                accessor.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, Accessor& accessor) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(accessor));
+                accessor.deserialize(json);
+            }
+
+            void setGltfDocument(Document* pGltfDocument) override {
+                glTFChildOfRootProperty::setGltfDocument(pGltfDocument);
+                sparse.gltfDocument = pGltfDocument;
+            }
 
             // std::string -> AccessorType
             static AccessorType ParseType(const std::string& type)
@@ -539,8 +618,12 @@ namespace Microsoft
             }
         };
 
+
         struct MorphTarget
         {
+        private:
+            Document* gltfDocument;
+        public:
             std::string positionsAccessorId;
             std::string normalsAccessorId;
             std::string tangentsAccessorId;
@@ -555,6 +638,28 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            void serialize(nlohmann::json& json) const;
+
+            friend void to_json(nlohmann::json& json, const MorphTarget& pType) {
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, MorphTarget& pType) {
+                if (auto iter = json.find(ACCESSOR_POSITION); iter != json.end()) {
+                    pType.positionsAccessorId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find(ACCESSOR_NORMAL); iter != json.end()) {
+                    pType.normalsAccessorId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find(ACCESSOR_TANGENT); iter != json.end()) {
+                    pType.tangentsAccessorId = std::to_string(iter.value().get<uint32_t>());
+                }
+            }
+
+            [[nodiscard]] Document* getGltfDocument() const { return gltfDocument; }
+
+            void setGltfDocument(Document* pGltfDocument) { gltfDocument = pGltfDocument; }
         };
 
         struct MeshPrimitive : glTFProperty
@@ -566,6 +671,13 @@ namespace Microsoft
             std::string materialId;
             MeshMode mode = MESH_TRIANGLES;
             std::vector<MorphTarget> targets;
+
+            void setGltfDocument(Document* pGltfDocument) override {
+                glTFProperty::setGltfDocument(pGltfDocument);
+                for (auto &target : targets) {
+                    target.setGltfDocument(pGltfDocument);
+                }
+            }
 
             bool HasAttribute(const std::string& name) const
             {
@@ -611,6 +723,37 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            void serialize(nlohmann::json& json) const;
+
+            friend void to_json(nlohmann::json& json, const MeshPrimitive& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, MeshPrimitive& pType) {
+                nlohmann::from_json(json, static_cast<glTFProperty&>(pType));
+
+                if (auto it = json.find("attributes"); it != json.end()) {
+                    for (const auto& attribute : it.value().items()) {
+                        pType.attributes[attribute.key()] = std::to_string(attribute.value().get<uint32_t>());
+                    }
+                }
+
+                if (auto iter = json.find("indices"); iter != json.end()) {
+                    pType.indicesAccessorId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find("material"); iter != json.end()) {
+                    pType.materialId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find("mode"); iter != json.end()) {
+                    pType.mode = static_cast<MeshMode>(iter.value().get<int>());
+                }else pType.mode = MESH_TRIANGLES;
+
+                if (auto it = json.find("targets"); it != json.end()) {
+                    it.value().get_to(pType.targets);
+                }
+            }
         };
 
         struct Mesh : glTFChildOfRootProperty
@@ -629,6 +772,29 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            friend void to_json(nlohmann::json& json, const Mesh& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                json["primitives"] = pType.primitives;
+                if (!pType.weights.empty()) json["weights"] = pType.weights;
+            }
+
+            friend void from_json(const nlohmann::json& json, Mesh& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                json.at("primitives").get_to(pType.primitives);
+                if (auto it = json.find("weights"); it != json.end()) it.value().get_to(pType.weights);
+            }
+
+            void deserializeExtensions(const std::shared_ptr<ExtensionDeserializer> &pDeserializer) override {
+                glTFChildOfRootProperty::deserializeExtensions(pDeserializer);
+                for (auto &primitive : primitives)
+                    primitive.deserializeExtensions(pDeserializer);
+            }
+
+            void setGltfDocument(Document* pGltfDocument) override {
+                glTFChildOfRootProperty::setGltfDocument(pGltfDocument);
+                for (auto &primitive : primitives) primitive.setGltfDocument(pGltfDocument);
+            }
         };
 
         struct Buffer : glTFChildOfRootProperty
@@ -646,6 +812,18 @@ namespace Microsoft
             bool operator!=(const Buffer& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            friend void to_json(nlohmann::json& json, const Buffer& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                if (!pType.uri.empty()) json["uri"] = pType.uri;
+                json["byteLength"] = pType.byteLength;
+            }
+
+            friend void from_json(const nlohmann::json& json, Buffer& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                pType.uri = json.value("uri", "");
+                json.at("byteLength").get_to(pType.byteLength);
             }
         };
 
@@ -673,6 +851,21 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+            friend void to_json(nlohmann::json& json, const Asset& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                if (!pType.copyright.empty()) json["copyright"] = pType.copyright;
+                if (!pType.generator.empty()) json["generator"] = pType.generator;
+                json["version"] = pType.version;
+                if (!pType.minVersion.empty()) json["minVersion"] = pType.minVersion;
+            }
+
+            friend void from_json(const nlohmann::json& json, Asset& pType) {
+                nlohmann::from_json(json, static_cast<glTFProperty&>(pType));
+                pType.copyright = json.value("copyright", "");
+                pType.generator = json.value("generator", "");
+                pType.version = json.at("version").get_to(pType.version);
+                pType.minVersion = json.value("minVersion", "");
+            }
         };
 
         enum class TextureType
@@ -699,6 +892,20 @@ namespace Microsoft
                 return !operator==(rhs);
             }
 
+            void serialize(nlohmann::json& json) const;
+
+            friend void to_json(nlohmann::json& json, const TextureInfo& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, TextureInfo& pType) {
+                nlohmann::from_json(json, static_cast<glTFProperty&>(pType));
+                pType.textureId = std::to_string(json.at("index").get<uint32_t>());
+                if (auto iter = json.find("texCoord"); iter != json.end()) {
+                    pType.texCoord = iter.value().get<uint32_t>();
+                }
+            }
         protected:
             static bool Equals(const TextureInfo& lhs, const TextureInfo& rhs)
             {
@@ -726,6 +933,11 @@ namespace Microsoft
                 float roughnessFactor;
                 TextureInfo metallicRoughnessTexture;
 
+                void setGltfDocument(Document* pGltfDocument) override {
+                    glTFProperty::setGltfDocument(pGltfDocument);
+                    baseColorTexture.setGltfDocument(pGltfDocument);
+                    metallicRoughnessTexture.setGltfDocument(pGltfDocument);
+                }
                 bool operator==(const PBRMetallicRoughness& rhs) const
                 {
                     return this->baseColorFactor == rhs.baseColorFactor
@@ -738,6 +950,53 @@ namespace Microsoft
                 bool operator!=(const PBRMetallicRoughness& rhs) const
                 {
                     return !operator==(rhs);
+                }
+
+                bool isDefault() const {
+                    return baseColorFactor == Color4(1.0f, 1.0f, 1.0f, 1.0f)
+                        && baseColorTexture.textureId.empty()
+                        && metallicFactor == 1.0f
+                        && roughnessFactor == 1.0f
+                        && metallicRoughnessTexture.textureId.empty();
+                }
+
+                friend void to_json(nlohmann::json& json, const PBRMetallicRoughness& pType) {
+                    nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                    if (pType.baseColorFactor != Color4(1.0f, 1.0f, 1.0f, 1.0f))
+                        json["baseColorFactor"] = pType.baseColorFactor;
+                    if (!pType.baseColorTexture.textureId.empty())
+                        json["baseColorTexture"] = pType.baseColorTexture;
+                    if (pType.metallicFactor != 1.0f)
+                        json["metallicFactor"] = pType.metallicFactor;
+                    if (pType.roughnessFactor != 1.0f)
+                        json["roughnessFactor"] = pType.roughnessFactor;
+                    if (!pType.metallicRoughnessTexture.textureId.empty())
+                        json["metallicRoughnessTexture"] = pType.metallicRoughnessTexture;
+                }
+
+                friend void from_json(const nlohmann::json& json, PBRMetallicRoughness& pType) {
+                    nlohmann::from_json(json, static_cast<glTFProperty&>(pType));
+                    if (auto iter = json.find("baseColorFactor"); iter != json.end()) {
+                        iter.value().get_to(pType.baseColorFactor);
+                    }
+                    if (auto iter = json.find("baseColorTexture"); iter != json.end()) {
+                        iter.value().get_to(pType.baseColorTexture);
+                    }
+                    if (auto iter = json.find("metallicFactor"); iter != json.end()) {
+                        iter.value().get_to(pType.metallicFactor);
+                    }
+                    if (auto iter = json.find("roughnessFactor"); iter != json.end()) {
+                        iter.value().get_to(pType.roughnessFactor);
+                    }
+                    if (auto iter = json.find("metallicRoughnessTexture"); iter != json.end()) {
+                        iter.value().get_to(pType.metallicRoughnessTexture);
+                    }
+                }
+
+                void deserializeExtensions(const std::shared_ptr<ExtensionDeserializer> &pDeserializer) override {
+                    glTFProperty::deserializeExtensions(pDeserializer);
+                    baseColorTexture.deserializeExtensions(pDeserializer);
+                    metallicRoughnessTexture.deserializeExtensions(pDeserializer);
                 }
             };
 
@@ -760,6 +1019,18 @@ namespace Microsoft
                 {
                     return !operator==(rhs);
                 }
+
+                friend void to_json(nlohmann::json& json, const NormalTextureInfo& pType) {
+                    nlohmann::to_json(json, static_cast<const TextureInfo&>(pType));
+                    if (pType.scale != 1.0f) json["scale"] = pType.scale;
+                }
+
+                friend void from_json(const nlohmann::json& json, NormalTextureInfo& pType) {
+                    nlohmann::from_json(json, static_cast<TextureInfo&>(pType));
+                    if (auto iter = json.find("scale"); iter != json.end()) {
+                        iter.value().get_to(pType.scale);
+                    }
+                }
             };
 
             struct OcclusionTextureInfo : TextureInfo
@@ -781,6 +1052,18 @@ namespace Microsoft
                 {
                     return !operator==(rhs);
                 }
+
+                friend void to_json(nlohmann::json& json, const OcclusionTextureInfo& pType) {
+                    nlohmann::to_json(json, static_cast<const TextureInfo&>(pType));
+                    if (pType.strength != 1.0f) json["strength"] = pType.strength;
+                }
+
+                friend void from_json(const nlohmann::json& json, OcclusionTextureInfo& pType) {
+                    nlohmann::from_json(json, static_cast<TextureInfo&>(pType));
+                    if (auto iter = json.find("strength"); iter != json.end()) {
+                        iter.value().get_to(pType.strength);
+                    }
+                }
             };
 
             Material() :
@@ -799,6 +1082,14 @@ namespace Microsoft
             AlphaMode alphaMode;
             float alphaCutoff;
             bool doubleSided;
+
+            void setGltfDocument(Document* pGltfDocument) override {
+                glTFChildOfRootProperty::setGltfDocument(pGltfDocument);
+                metallicRoughness.setGltfDocument(pGltfDocument);
+                normalTexture.setGltfDocument(pGltfDocument);
+                occlusionTexture.setGltfDocument(pGltfDocument);
+                emissiveTexture.setGltfDocument(pGltfDocument);
+            }
 
             std::vector<std::pair<std::string, TextureType>> GetTextures() const
             {
@@ -828,6 +1119,71 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            void deserializeExtensions(const std::shared_ptr<ExtensionDeserializer> &pDeserializer) override{
+                glTFChildOfRootProperty::deserializeExtensions(pDeserializer);
+                metallicRoughness.deserializeExtensions(pDeserializer);
+                normalTexture.deserializeExtensions(pDeserializer);
+                occlusionTexture.deserializeExtensions(pDeserializer);
+                emissiveTexture.deserializeExtensions(pDeserializer);
+            }
+
+            static std::string AlphaModeToString(AlphaMode mode)
+            {
+                switch (mode)
+                {
+                    case ALPHA_OPAQUE:
+                        return ALPHAMODE_NAME_OPAQUE;
+                    case ALPHA_BLEND:
+                        return ALPHAMODE_NAME_BLEND;
+                    case ALPHA_MASK:
+                        return ALPHAMODE_NAME_MASK;
+                    default:
+                        return "";
+                }
+            }
+            friend void to_json(nlohmann::json& json, const Material& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                if (!pType.metallicRoughness.isDefault())
+                    json["pbrMetallicRoughness"] = pType.metallicRoughness;
+                if (!pType.normalTexture.textureId.empty())
+                    json["normalTexture"] = pType.normalTexture;
+                if (!pType.occlusionTexture.textureId.empty())
+                    json["occlusionTexture"] = pType.occlusionTexture;
+                if (!pType.emissiveTexture.textureId.empty())
+                    json["emissiveTexture"] = pType.emissiveTexture;
+                if (pType.emissiveFactor != Color3(0.0f, 0.0f, 0.0f))
+                    json["emissiveFactor"] = pType.emissiveFactor;
+                if (pType.alphaMode != ALPHA_OPAQUE && pType.alphaMode != ALPHA_UNKNOWN)
+                    json["alphaMode"] = AlphaModeToString(pType.alphaMode);
+                if (pType.alphaCutoff != 0.5f)
+                    json["alphaCutoff"] = pType.alphaCutoff;
+                if (pType.doubleSided)
+                    json["doubleSided"] = pType.doubleSided;
+
+            }
+
+            friend void from_json(const nlohmann::json& json, Material& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                if (auto iter = json.find("pbrMetallicRoughness"); iter != json.end()) {
+                    iter.value().get_to(pType.metallicRoughness);
+                }
+                if (auto iter = json.find("normalTexture"); iter != json.end()) {
+                    iter.value().get_to(pType.normalTexture);
+                }
+                if (auto iter = json.find("occlusionTexture"); iter != json.end()) {
+                    iter.value().get_to(pType.occlusionTexture);
+                }
+                if (auto iter = json.find("emissiveTexture"); iter != json.end()) {
+                    iter.value().get_to(pType.emissiveTexture);
+                }
+                if (auto iter = json.find("emissiveFactor"); iter != json.end()) {
+                    iter.value().get_to(pType.emissiveFactor);
+                }
+                pType.alphaMode = ParseAlphaMode(json.value("alphaMode", "OPAQUE"));
+                pType.alphaCutoff = json.value("alphaCutoff", 0.5f);
+                pType.doubleSided = json.value("doubleSided", false);
+            }
         };
 
         // Textures that references an Image
@@ -846,6 +1202,23 @@ namespace Microsoft
             bool operator!=(const Texture& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            void serialize(nlohmann::json& json) const;
+
+            friend void to_json(nlohmann::json& json, const Texture& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, Texture& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                if (auto iter = json.find("sampler"); iter != json.end()) {
+                    pType.samplerId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find("source"); iter != json.end()) {
+                    pType.imageId = std::to_string(iter.value().get<uint32_t>());
+                }
             }
         };
 
@@ -867,6 +1240,22 @@ namespace Microsoft
             bool operator!=(const Image& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            void serialize(nlohmann::json& json) const;
+
+            friend void to_json(nlohmann::json& json, const Image& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, Image& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                pType.uri = json.value("uri", "");
+                if (auto iter = json.find("bufferView"); iter != json.end()) {
+                    pType.bufferViewId = std::to_string(iter.value().get<uint32_t>());
+                }
+                pType.mimeType = json.value("mimeType", "");
             }
         };
 
@@ -899,6 +1288,7 @@ namespace Microsoft
                 return glTFProperty::Equals(*this, rhs)
                     && this->znear == rhs.znear;
             }
+
         };
 
         struct Orthographic : Projection
@@ -907,6 +1297,9 @@ namespace Microsoft
             float ymag;
             float zfar;
 
+        private:
+            explicit Orthographic(float znear) : Projection(znear){}
+        public:
             Orthographic(float zfar, float znear, float xmag, float ymag) :
                 Projection(znear),
                 xmag(xmag),
@@ -914,6 +1307,7 @@ namespace Microsoft
                 zfar(zfar)
             {
             }
+
 
             bool IsValid() const override
             {
@@ -943,6 +1337,24 @@ namespace Microsoft
                 }
 
                 return false;
+            }
+
+            friend void to_json(nlohmann::json& json, const Orthographic& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                json["znear"] = pType.znear;
+                json["xmag"] = pType.xmag;
+                json["ymag"] = pType.ymag;
+                json["zfar"] = pType.zfar;
+            }
+
+            friend void from_json(const nlohmann::json& json, std::unique_ptr<Orthographic>& pType) {
+
+                float znear = json.at("znear").get<float>();
+                if (!pType) pType = std::unique_ptr<Orthographic>(new Orthographic(znear));
+                nlohmann::from_json(json, static_cast<glTFProperty&>(*pType));
+                json.at("xmag").get_to(pType->xmag);
+                json.at("ymag").get_to(pType->ymag);
+                json.at("zfar").get_to(pType->zfar);
             }
         };
 
@@ -1005,10 +1417,35 @@ namespace Microsoft
 
                 return false;
             }
+
+            friend void to_json(nlohmann::json& json, const Perspective& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                json["yfov"] = pType.yfov;
+                json["znear"] = pType.znear;
+                if (pType.zfar) json["zfar"] = pType.zfar.Get();
+                if (pType.aspectRatio) json["aspectRatio"] = pType.aspectRatio.Get();
+            }
+
+            friend void from_json(const nlohmann::json& json, std::unique_ptr<Perspective>& pType) {
+                float yfov = json.at("yfov").get<float>();
+                float znear = json.at("znear").get<float>();
+
+                if (!pType) pType = std::make_unique<Perspective>(znear, yfov);
+                nlohmann::from_json(json, static_cast<glTFProperty&>(*pType));
+                if (auto itZFar = json.find("zfar"); itZFar != json.end())
+                    pType->zfar = itZFar.value().get<float>();
+
+                if (auto itAspectRatio = json.find("aspectRatio"); itAspectRatio != json.end())
+                    pType->aspectRatio = itAspectRatio.value().get<float>();;
+            }
         };
 
         struct Camera : glTFChildOfRootProperty
         {
+
+        private:
+        public:
+            Camera() = default;
             std::unique_ptr<Projection> projection;
 
             Camera(std::unique_ptr<Projection> projection) :
@@ -1075,6 +1512,48 @@ namespace Microsoft
             bool operator!=(const Camera& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            friend void to_json(nlohmann::json& json, const Camera& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+
+                const ProjectionType projectionType = pType.projection->GetProjectionType();
+                if (projectionType == PROJECTION_PERSPECTIVE) {
+                    json["type"] = "perspective";
+                    json["perspective"] = pType.GetPerspective();
+                }else {
+                    json["type"] = "orthographic";
+                    json["orthographic"] = pType.GetOrthographic();
+                }
+                //json["bufferViewId"] = pType.bufferViewId;
+            }
+
+            friend void from_json(const nlohmann::json& json, Camera& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                auto projectionType = json.at("type").get<std::string>();
+
+                if (projectionType == "perspective") {
+                    if (const auto iter = json.find("perspective"); iter != json.end())
+                        pType.projection = iter.value().get<std::unique_ptr<Perspective>>();
+                    else
+                        throw InvalidGLTFException("Camera perspective projection undefined");
+                } else if (projectionType == "orthographic") {
+                    if (const auto iter = json.find("orthographic"); iter != json.end())
+                        pType.projection = iter.value().get<std::unique_ptr<Orthographic>>();
+                    else
+                        throw InvalidGLTFException("Camera orthographic projection undefined");
+                } else {
+                    throw GLTFException("Cannot create camera with null projection");
+                }
+
+                if (!pType.projection->IsValid())
+                    throw InvalidGLTFException("Camera's projection is not valid");
+
+            }
+
+            void setGltfDocument(Document* pGltfDocument) override {
+                glTFChildOfRootProperty::setGltfDocument(pGltfDocument);
+                projection->setGltfDocument(pGltfDocument);
             }
         };
 
@@ -1143,6 +1622,48 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            void serialize(nlohmann::json &json) const;
+
+            friend void to_json(nlohmann::json& json, const Node& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, Node& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                if (auto it = json.find("children"); it != json.end()){
+                    std::vector<uint32_t> tmpChildren;
+                    it.value().get_to(tmpChildren);
+                    pType.children.reserve(tmpChildren.size());
+                    for (uint32_t child : tmpChildren) pType.children.push_back(std::to_string(child));
+                }
+
+                if (auto iter = json.find("mesh"); iter != json.end()) {
+                    pType.meshId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find("skin"); iter != json.end()) {
+                    pType.skinId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find("camera"); iter != json.end())
+                    pType.cameraId = std::to_string(iter.value().get<uint32_t>());
+
+                if (auto it = json.find("matrix"); it == json.end()) {
+                    if (auto iter = json.find("scale"); iter == json.end()) {
+                        pType.scale = Vector3::ONE;
+                    }else iter.value().get_to(pType.scale);
+
+                    if (const auto iter = json.find("translation"); iter == json.end())
+                        pType.translation = Vector3::ZERO;
+                    else iter.value().get_to(pType.translation);
+
+                    if (const auto iter = json.find("rotation"); iter == json.end())
+                        pType.rotation = Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+                    else iter.value().get_to(pType.rotation);
+                }else it.value().get_to(pType.matrix);
+
+                if (auto iter = json.find("weights"); iter != json.end()) iter.value().get_to(pType.weights);
+            }
         };
 
         struct Scene : glTFChildOfRootProperty
@@ -1158,6 +1679,26 @@ namespace Microsoft
             bool operator!=(const Scene& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            void serialize(nlohmann::json &json) const;
+
+            friend void to_json(nlohmann::json& json, const Scene& pType) {
+                if (json.is_null())
+                    json = nlohmann::json::object();
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, Scene& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+
+                if (auto it = json.find("nodes"); it != json.end()){
+                    std::vector<uint32_t> tmpNodes;
+                    it.value().get_to(tmpNodes);
+                    pType.nodes.reserve(tmpNodes.size());
+                    for (uint32_t node : tmpNodes) pType.nodes.push_back(std::to_string(node));
+                }
             }
         };
 
@@ -1255,6 +1796,28 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            friend void to_json(nlohmann::json& json, const Sampler& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                if (pType.magFilter) json["magFilter"] = pType.magFilter.Get();
+                if (pType.minFilter) json["minFilter"] = pType.minFilter.Get();
+                if (pType.wrapS != Wrap_REPEAT) json["wrapS"] = pType.wrapS;
+                if (pType.wrapT != Wrap_REPEAT) json["wrapT"] = pType.wrapT;
+            }
+
+            friend void from_json(const nlohmann::json& json, Sampler& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+
+                pType.wrapT = GetSamplerWrapMode(json.value("wrapT", Wrap_REPEAT));
+                pType.wrapS = GetSamplerWrapMode(json.value("wrapS", Wrap_REPEAT));
+
+                if (auto itMin = json.find("minFilter"); itMin != json.end())
+                    pType.minFilter = GetSamplerMinFilterMode(itMin.value().get<uint32_t>());
+
+                if (auto itMag = json.find("magFilter"); itMag != json.end())
+                    pType.magFilter = GetSamplerMagFilterMode(itMag.value().get<uint32_t>());
+
+            }
         };
 
         struct AnimationTarget : glTFProperty
@@ -1273,10 +1836,44 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            static std::string TargetPathToString(TargetPath target)
+            {
+                switch (target)
+                {
+                    case TARGET_TRANSLATION:
+                        return TARGETPATH_NAME_TRANSLATION;
+                    case TARGET_ROTATION:
+                        return TARGETPATH_NAME_ROTATION;
+                    case TARGET_SCALE:
+                        return TARGETPATH_NAME_SCALE;
+                    case TARGET_WEIGHTS:
+                        return TARGETPATH_NAME_WEIGHTS;
+                    default:
+                        return "";
+                }
+            }
+
+            void serialize(nlohmann::json& json) const;
+
+            friend void to_json(nlohmann::json& json, const AnimationTarget& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                pType.serialize(json);
+                //pType.samplerId = std::to_string();
+            }
+
+            friend void from_json(const nlohmann::json& json, AnimationTarget& pType) {
+                nlohmann::from_json(json, static_cast<glTFProperty&>(pType));
+                if (auto iter = json.find("node"); iter != json.end()) {
+                    pType.nodeId = std::to_string(iter.value().get<uint32_t>());
+                }
+                pType.path = ParseTargetPath(json.at("path").get<std::string>());
+            }
         };
 
         struct AnimationChannel : glTFProperty
         {
+            Animation* parent{};
             std::string id;
             std::string samplerId;
             AnimationTarget target;
@@ -1289,9 +1886,25 @@ namespace Microsoft
                     && this->target == rhs.target;
             }
 
+            void setGltfDocument(Document* pGltfDocument) override {
+                glTFProperty::setGltfDocument(pGltfDocument);
+                target.setGltfDocument(pGltfDocument);
+            }
+
             bool operator!=(const AnimationChannel& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            friend void to_json(nlohmann::json& json, const AnimationChannel& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                //pType.samplerId = std::to_string();
+            }
+
+            friend void from_json(const nlohmann::json& json, AnimationChannel& pType) {
+                nlohmann::from_json(json, static_cast<glTFProperty&>(pType));
+                pType.samplerId = std::to_string(json.at("sampler").get<uint32_t>());
+                json.at("target").get_to(pType.target);
             }
         };
         
@@ -1315,12 +1928,33 @@ namespace Microsoft
             {
                 return !operator==(rhs);
             }
+
+            void serialize(nlohmann::json& json) const;
+
+            friend void to_json(nlohmann::json& json, const AnimationSampler& pType) {
+                nlohmann::to_json(json, static_cast<const glTFProperty&>(pType));
+                pType.serialize(json);
+                //pType.samplerId = std::to_string();
+            }
+
+            friend void from_json(const nlohmann::json& json, AnimationSampler& pType) {
+                nlohmann::from_json(json, static_cast<glTFProperty&>(pType));
+                pType.inputAccessorId = std::to_string(json.at("input").get<uint32_t>());
+                pType.interpolation = ParseInterpolationType(json.value("interpolation", "LINEAR"));
+                pType.outputAccessorId = std::to_string(json.at("output").get<uint32_t>());
+            }
         };
 
         struct Animation : glTFChildOfRootProperty
         {
-            IndexedContainer<const AnimationChannel> channels;
-            IndexedContainer<const AnimationSampler> samplers;
+            IndexedContainer<AnimationChannel> channels;
+            IndexedContainer<AnimationSampler> samplers;
+
+            void setGltfDocument(Document* pGltfDocument) override {
+                glTFChildOfRootProperty::setGltfDocument(pGltfDocument);
+                channels.setGltfDocument(pGltfDocument);
+                samplers.setGltfDocument(pGltfDocument);
+            }
 
             bool operator==(const Animation& rhs) const
             {
@@ -1332,6 +1966,23 @@ namespace Microsoft
             bool operator!=(const Animation& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            friend void to_json(nlohmann::json& json, const Animation& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                json["samplers"] = pType.samplers;
+                for (const auto &element : pType.channels.Elements()) {
+                    nlohmann::json channel;
+                    channel["sampler"] = pType.samplers.GetIndex(element.samplerId);
+                    channel["target"] = element.target;
+                    json["channels"].push_back(channel);
+                }
+            }
+
+            friend void from_json(const nlohmann::json& json, Animation& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                json.at("samplers").get_to(pType.samplers);
+                json.at("channels").get_to(pType.channels);
             }
         };
 
@@ -1352,6 +2003,27 @@ namespace Microsoft
             bool operator!=(const Skin& rhs) const
             {
                 return !operator==(rhs);
+            }
+
+            void serialize(nlohmann::json &json) const;
+
+            friend void to_json(nlohmann::json& json, const Skin& pType) {
+                nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
+                pType.serialize(json);
+            }
+
+            friend void from_json(const nlohmann::json& json, Skin& pType) {
+                nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
+                if (auto iter = json.find("inverseBindMatrices"); iter != json.end()) {
+                    pType.inverseBindMatricesAccessorId = std::to_string(iter.value().get<uint32_t>());
+                }
+                if (auto iter = json.find("skeleton"); iter != json.end()) {
+                    pType.skeletonId = std::to_string(iter.value().get<uint32_t>());
+                }
+                std::vector<uint32_t> joints;
+                json.at("joints").get_to(joints);
+                for (const uint32_t & joint : joints) pType.jointIds.emplace_back(std::to_string(joint));
+
             }
         };
     }

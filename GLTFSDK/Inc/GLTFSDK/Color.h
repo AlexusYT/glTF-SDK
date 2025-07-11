@@ -4,6 +4,10 @@
 #pragma once
 
 #include <cstdint>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/detail/conversions/from_json.hpp>
+#include <nlohmann/detail/conversions/to_json.hpp>
 
 namespace Microsoft
 {
@@ -149,6 +153,18 @@ namespace Microsoft
             static Color3 FromUint32BGRA(uint32_t color);
 
             static Color3 Clamp(const Color3& color, float lo, float hi);
+
+            friend void to_json(nlohmann::json& json, const Color3& pType) {
+                json[0] = pType.r;
+                json[1] = pType.g;
+                json[2] = pType.b;
+            }
+
+            friend void from_json(const nlohmann::json& json, Color3& pType) {
+                json[0].get_to(pType.r);
+                json[1].get_to(pType.g);
+                json[2].get_to(pType.b);
+            }
         };
 
         bool operator==(const Color3& lhs, const Color3& rhs);
@@ -189,6 +205,20 @@ namespace Microsoft
             static Color4 FromUint32BGRA(uint32_t color);
 
             static Color4 Clamp(const Color4& color, float lo, float hi);
+
+            friend void to_json(nlohmann::json& json, const Color4& pType) {
+                json[0] = pType.r;
+                json[1] = pType.g;
+                json[2] = pType.b;
+                json[3] = pType.a;
+            }
+
+            friend void from_json(const nlohmann::json& json, Color4& pType) {
+                json[0].get_to(pType.r);
+                json[1].get_to(pType.g);
+                json[2].get_to(pType.b);
+                json[3].get_to(pType.a);
+            }
         };
 
         bool operator==(const Color4& lhs, const Color4& rhs);

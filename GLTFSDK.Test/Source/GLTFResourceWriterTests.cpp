@@ -68,9 +68,6 @@ namespace
 
     static const char expectedBufferBuilder[] =
 R"({
-    "asset": {
-        "version": "2.0"
-    },
     "accessors": [
         {
             "bufferView": 0,
@@ -92,17 +89,20 @@ R"({
             "type": "VEC2"
         }
     ],
+    "asset": {
+        "version": "2.0"
+    },
     "bufferViews": [
         {
             "buffer": 0,
-            "byteOffset": 0,
             "byteLength": 6,
+            "byteOffset": 0,
             "target": 34963
         },
         {
             "buffer": 0,
-            "byteOffset": 8,
             "byteLength": 52,
+            "byteOffset": 8,
             "target": 34962
         }
     ],
@@ -122,13 +122,13 @@ R"({
     "bufferViews": [
         {
             "buffer": 0,
-            "byteOffset": 0,
-            "byteLength": 4
+            "byteLength": 4,
+            "byteOffset": 0
         },
         {
             "buffer": 1,
-            "byteOffset": 0,
-            "byteLength": 4
+            "byteLength": 4,
+            "byteOffset": 0
         }
     ],
     "buffers": [
@@ -145,27 +145,23 @@ R"({
 
 static const char expectedBufferBuilderMultipleAccessor[] =
 R"({
-    "asset": {
-        "version": "2.0"
-    },
     "accessors": [
         {
             "bufferView": 0,
             "componentType": 5121,
             "count": 6,
-            "type": "SCALAR",
             "max": [
                 3.0
             ],
             "min": [
                 0.0
-            ]
+            ],
+            "type": "SCALAR"
         },
         {
             "bufferView": 1,
             "componentType": 5126,
             "count": 4,
-            "type": "VEC3",
             "max": [
                 1.0,
                 1.0,
@@ -175,14 +171,14 @@ R"({
                 -1.0,
                 -1.0,
                 0.0
-            ]
+            ],
+            "type": "VEC3"
         },
         {
             "bufferView": 1,
             "byteOffset": 12,
             "componentType": 5126,
             "count": 4,
-            "type": "VEC3",
             "max": [
                 0.0,
                 0.0,
@@ -192,14 +188,14 @@ R"({
                 0.0,
                 0.0,
                 -1.0
-            ]
+            ],
+            "type": "VEC3"
         },
         {
             "bufferView": 1,
             "byteOffset": 24,
             "componentType": 5126,
             "count": 4,
-            "type": "VEC2",
             "max": [
                 1.0,
                 1.0
@@ -207,20 +203,24 @@ R"({
             "min": [
                 0.0,
                 0.0
-            ]
+            ],
+            "type": "VEC2"
         }
     ],
+    "asset": {
+        "version": "2.0"
+    },
     "bufferViews": [
         {
             "buffer": 0,
-            "byteOffset": 0,
             "byteLength": 6,
+            "byteOffset": 0,
             "target": 34963
         },
         {
             "buffer": 0,
-            "byteOffset": 8,
             "byteLength": 128,
+            "byteOffset": 8,
             "byteStride": 32,
             "target": 34962
         }
@@ -571,35 +571,35 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(GLTFResourceWriterTests, BufferBuilderMultiple)
                 {
-                    Document gltfDocument;
+                    auto  gltfDocument = Document::create();
 
                     {
                         std::vector<char> data(4, '!');
 
                         BufferBuilder bufferBuilder(std::make_unique<GLTFResourceWriter>(std::make_unique<TestStreamWriter>()),
-                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument.buffers.Size() + builder.GetBufferCount()); },
-                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument.bufferViews.Size() + builder.GetBufferViewCount()); },
-                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument.accessors.Size() + builder.GetAccessorCount()); });
+                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument->buffers.Size() + builder.GetBufferCount()); },
+                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument->bufferViews.Size() + builder.GetBufferViewCount()); },
+                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument->accessors.Size() + builder.GetAccessorCount()); });
 
                         bufferBuilder.AddBuffer();
                         bufferBuilder.AddBufferView(data);
-                        bufferBuilder.Output(gltfDocument);
+                        bufferBuilder.Output(*gltfDocument);
                     }
 
                     {
                         std::vector<char> data(4, '?');
 
                         BufferBuilder bufferBuilder(std::make_unique<GLTFResourceWriter>(std::make_unique<TestStreamWriter>()),
-                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument.buffers.Size() + builder.GetBufferCount()); },
-                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument.bufferViews.Size() + builder.GetBufferViewCount()); },
-                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument.accessors.Size() + builder.GetAccessorCount()); });
+                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument->buffers.Size() + builder.GetBufferCount()); },
+                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument->bufferViews.Size() + builder.GetBufferViewCount()); },
+                            [&gltfDocument](const BufferBuilder& builder) { return std::to_string(gltfDocument->accessors.Size() + builder.GetAccessorCount()); });
 
                         bufferBuilder.AddBuffer();
                         bufferBuilder.AddBufferView(data);
-                        bufferBuilder.Output(gltfDocument);
+                        bufferBuilder.Output(*gltfDocument);
                     }
 
-                    const std::string gltfManifest = Serialize(gltfDocument, SerializeFlags::Pretty);
+                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, SerializeFlags::Pretty);
 
                     Assert::AreEqual(expectedBufferBuilderMultiple, gltfManifest.c_str());
                 }
@@ -623,10 +623,10 @@ namespace Microsoft
                     bufferBuilder.AddAccessor(positions.data(), positions.size() / 3U, { TYPE_VEC3, COMPONENT_FLOAT });
                     bufferBuilder.AddAccessor(texCoords.data(), texCoords.size() / 2U, { TYPE_VEC2, COMPONENT_FLOAT });
 
-                    Document gltfDocument;
-                    bufferBuilder.Output(gltfDocument);
+                    auto gltfDocument = Document::create();
+                    bufferBuilder.Output(*gltfDocument);
 
-                    const std::string gltfManifest = Serialize(gltfDocument, SerializeFlags::Pretty);
+                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, SerializeFlags::Pretty);
 
                     Assert::AreEqual(expectedBufferBuilder, gltfManifest.c_str());
                 }
@@ -652,10 +652,10 @@ namespace Microsoft
                     bufferBuilder.AddAccessor(positions.data(), positions.size() / 3U, { TYPE_VEC3, COMPONENT_FLOAT });
                     bufferBuilder.AddAccessor(texCoords.data(), texCoords.size() / 2U, { TYPE_VEC2, COMPONENT_FLOAT });
 
-                    Document gltfDocument;
-                    bufferBuilder.Output(gltfDocument);
+                    auto gltfDocument = Document::create();
+                    bufferBuilder.Output(*gltfDocument);
 
-                    Assert::AreEqual(gltfDocument.buffers[0].uri.c_str(), "foo0.bin");
+                    Assert::AreEqual(gltfDocument->buffers[0].uri.c_str(), "foo0.bin");
                 }
 
                 GLTFSDK_TEST_METHOD(GLTFResourceWriterTests, InvalidMaxMinBufferBuilderAccessor)
@@ -722,10 +722,10 @@ namespace Microsoft
                     bufferBuilder.AddBufferView(BufferViewTarget::ARRAY_BUFFER);
                     bufferBuilder.AddAccessors(vertices.data(), count, stride, descs, ArrayCount(descs), nullptr);
 
-                    Document gltfDocument;
-                    bufferBuilder.Output(gltfDocument);
+                    auto gltfDocument= Document::create();
+                    bufferBuilder.Output(*gltfDocument);
 
-                    const std::string gltfManifest = Serialize(gltfDocument, SerializeFlags::Pretty);
+                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, SerializeFlags::Pretty);
 
                     Assert::AreEqual(expectedBufferBuilderMultipleAccessor, gltfManifest.c_str());
                 }
@@ -745,10 +745,10 @@ namespace Microsoft
                         std::vector<uint8_t> indices = { 0, 1, 2, 3, 4, 5, 6, UINT8_MAX };
                         auto accessor = bufferBuilder.AddAccessor(indices, { TYPE_SCALAR, COMPONENT_UNSIGNED_BYTE });
 
-                        Document doc;
-                        bufferBuilder.Output(doc);
+                        auto doc = Document::create();
+                        bufferBuilder.Output(*doc);
                         
-                        const auto gltfManifest = Serialize(doc);
+                        const auto gltfManifest = Serializer::Serialize(doc);
                         bufferBuilder.GetResourceWriter().WriteExternal(filename, gltfManifest.c_str(), gltfManifest.length());
                     }
 
@@ -756,9 +756,9 @@ namespace Microsoft
                         auto inputStream = std::dynamic_pointer_cast<std::stringstream>(streamReaderWriter->GetInputStream(filename));
 
                         auto resourceReader = GLTFResourceReader(streamReaderWriter);
-                        auto doc = Deserialize(inputStream->str());
+                        auto doc = Deserializer::Deserialize(inputStream->str());
 
-                        auto output = MeshPrimitiveUtils::GetIndices16(doc, resourceReader, doc.accessors[0]);
+                        auto output = MeshPrimitiveUtils::GetIndices16(*doc, resourceReader, doc->accessors[0]);
 
                         std::vector<uint16_t> expected = { 0, 1, 2, 3, 4, 5, 6, UINT8_MAX };
                         AreEqual(expected, output);

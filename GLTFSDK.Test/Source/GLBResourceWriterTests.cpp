@@ -25,17 +25,17 @@ namespace Microsoft
                     std::string uri = "foo.glb";
 
                     // Serialize Default Document -> Json string -> Stream
-                    Document doc;
-                    const auto serialiedJson = Serialize(doc, SerializeFlags::None);
+                    auto doc = Document::create();
+                    const auto serialiedJson = Serializer::Serialize(doc, SerializeFlags::None);
                     writer.Flush(serialiedJson, uri);
                     auto stream = streamWriter->GetInputStream(uri);
 
                     // Deserialize Stream -> Document
                     GLBResourceReader resourceReader(streamWriter, stream);
-                    Document roundTrippedDoc = Deserialize(resourceReader.GetJson());
+                    auto roundTrippedDoc = Deserializer::Deserialize(resourceReader.GetJson());
 
                     Assert::IsFalse(stream->fail());
-                    Assert::IsTrue(doc == roundTrippedDoc);
+                    Assert::IsTrue(*doc == *roundTrippedDoc);
                 }
             };
         }

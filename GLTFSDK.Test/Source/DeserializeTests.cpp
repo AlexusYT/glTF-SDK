@@ -336,14 +336,14 @@ namespace Microsoft
             {
                 GLTFSDK_TEST_METHOD(DeserializeTests, ValidationSuccess_ValidPrimitiveNoIndices)
                 {
-                    auto doc = Deserialize(c_validPrimitiveNoIndices);
+                    auto doc = Deserializer::Deserialize(c_validPrimitiveNoIndices);
 
-                    Validation::Validate(doc);
+                    Validation::Validate(*doc);
 
-                    Assert::AreEqual(size_t(1), doc.meshes.Size());
-                    Assert::AreEqual(size_t(1), doc.meshes.Front().primitives.size());
+                    Assert::AreEqual(size_t(1), doc->meshes.Size());
+                    Assert::AreEqual(size_t(1), doc->meshes.Front().primitives.size());
 
-                    const auto& accessor = doc.meshes.Front().primitives.front();
+                    const auto& accessor = doc->meshes.Front().primitives.front();
 
                     Assert::IsTrue(accessor.HasAttribute(glTF::ACCESSOR_POSITION));
                     Assert::IsTrue(accessor.indicesAccessorId.empty());
@@ -351,13 +351,13 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(DeserializeTests, ValidationFail_InvalidPrimitiveAccessorComponentType)
                 {
-                    auto doc = Deserialize(c_invalidPrimitiveAccessorComponentType);
+                    auto doc = Deserializer::Deserialize(c_invalidPrimitiveAccessorComponentType);
 
                     Assert::ExpectException<ValidationException>([&doc]()
                     {
                         try
                         {
-                            Validation::Validate(doc);
+                            Validation::Validate(*doc);
                         }
                         catch (const ValidationException& ex)
                         {
@@ -369,13 +369,13 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(DeserializeTests, ValidationFail_InvalidPrimitiveAccessorType)
                 {
-                    auto doc = Deserialize(c_invalidPrimitiveAccessorType);
+                    auto doc = Deserializer::Deserialize(c_invalidPrimitiveAccessorType);
 
                     Assert::ExpectException<ValidationException>([&doc]()
                     {
                         try
                         {
-                            Validation::Validate(doc);
+                            Validation::Validate(*doc);
                         }
                         catch (const ValidationException& ex)
                         {
@@ -387,18 +387,18 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(DeserializeTests, DeserializeSuccess_ExtraRootFields)
                 {
-                    auto doc = Deserialize(c_extraFieldsJson);
+                    auto doc = Deserializer::Deserialize(c_extraFieldsJson);
 
-                    Assert::AreEqual(GLTF_VERSION_2_0, doc.asset.version.c_str());
+                    Assert::AreEqual(GLTF_VERSION_2_0, doc->asset.version.c_str());
                 }
 
                 GLTFSDK_TEST_METHOD(DeserializeTests, DeserializeSuccess_ValidAccessor)
                 {
-                    auto doc = Deserialize(c_validAccessor);
+                    auto doc = Deserializer::Deserialize(c_validAccessor);
 
-                    Assert::AreEqual(size_t(1), doc.accessors.Size());
+                    Assert::AreEqual(size_t(1), doc->accessors.Size());
 
-                    const auto& accessor = doc.accessors.Front();
+                    const auto& accessor = doc->accessors.Front();
 
                     Assert::IsTrue(accessor.bufferViewId.empty());
                     Assert::AreEqual(size_t(0), accessor.byteOffset);
@@ -411,11 +411,11 @@ namespace Microsoft
                     {
                         try
                         {
-                            Deserialize(c_negativeAccessorOffset);
+                            Deserializer::Deserialize(c_negativeAccessorOffset);
                         }
                         catch (const ValidationException& ex)
                         {
-                            Assert::AreEqual("Schema violation at #/accessors/0/byteOffset due to minimum", ex.what());
+                            Assert::AreEqual("Schema violation at <root>[accessors][0][byteOffset] due to Expected number greater than or equal to 0.000000", ex.what());
                             throw;
                         }
                     });
@@ -427,11 +427,11 @@ namespace Microsoft
                     {
                         try
                         {
-                            Deserialize(c_negativeAccessorCount);
+                            Deserializer::Deserialize(c_negativeAccessorCount);
                         }
                         catch (const ValidationException& ex)
                         {
-                            Assert::AreEqual("Schema violation at #/accessors/0/count due to minimum", ex.what());
+                            Assert::AreEqual("Schema violation at <root>[accessors][0][count] due to Expected number greater than or equal to 1.000000", ex.what());
                             throw;
                         }
                     });
@@ -443,11 +443,11 @@ namespace Microsoft
                     {
                         try
                         {
-                            Deserialize(c_invalidAccessorDependency);
+                            Deserializer::Deserialize(c_invalidAccessorDependency);
                         }
                         catch (const ValidationException& ex)
                         {
-                            Assert::AreEqual("Schema violation at #/accessors/0 due to dependencies", ex.what());
+                            Assert::AreEqual("Schema violation at <root>[accessors][0] due to Missing dependency 'bufferView'.", ex.what());
                             throw;
                         }
                     });
@@ -455,13 +455,13 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(DeserializeTests, DeserializeFail_InvalidAccessorComponentType)
                 {
-                    auto doc = Deserialize(c_invalidAccessorComponentType);
+                    auto doc = Deserializer::Deserialize(c_invalidAccessorComponentType);
 
                     Assert::ExpectException<GLTFException>([&doc]()
                     {
                         try
                         {
-                            Validation::Validate(doc);
+                            Validation::Validate(*doc);
                         }
                         catch (const GLTFException& ex)
                         {
@@ -477,11 +477,11 @@ namespace Microsoft
                     {
                         try
                         {
-                            Deserialize(c_negativeBufferLength);
+                            Deserializer::Deserialize(c_negativeBufferLength);
                         }
                         catch (const ValidationException& ex)
                         {
-                            Assert::AreEqual("Schema violation at #/buffers/0/byteLength due to minimum", ex.what());
+                            Assert::AreEqual("Schema violation at <root>[buffers][0][byteLength] due to Expected number greater than or equal to 1.000000", ex.what());
                             throw;
                         }
                     });
@@ -493,11 +493,11 @@ namespace Microsoft
                     {
                         try
                         {
-                            Deserialize(c_negativeBufferViewOffset);
+                            Deserializer::Deserialize(c_negativeBufferViewOffset);
                         }
                         catch (const ValidationException& ex)
                         {
-                            Assert::AreEqual("Schema violation at #/bufferViews/0/byteOffset due to minimum", ex.what());
+                            Assert::AreEqual("Schema violation at <root>[bufferViews][0][byteOffset] due to Expected number greater than or equal to 0.000000", ex.what());
                             throw;
                         }
                     });
@@ -509,11 +509,11 @@ namespace Microsoft
                     {
                         try
                         {
-                            Deserialize(c_negativeBufferViewLength);
+                            Deserializer::Deserialize(c_negativeBufferViewLength);
                         }
                         catch (const ValidationException& ex)
                         {
-                            Assert::AreEqual("Schema violation at #/bufferViews/0/byteLength due to minimum", ex.what());
+                            Assert::AreEqual("Schema violation at <root>[bufferViews][0][byteLength] due to Expected number greater than or equal to 1.000000", ex.what());
                             throw;
                         }
                     });
@@ -524,21 +524,21 @@ namespace Microsoft
 
                 GLTFSDK_TEST_METHOD(DeserializeTests, DeserializeSuccess_DeserializeSampler)
                 {
-                    auto doc = Deserialize(c_validSamplerDocument);
+                    auto doc = Deserializer::Deserialize(c_validSamplerDocument);
 
-                    Assert::AreEqual(doc.samplers.Size(), size_t(2U), L"Unexpected number of samplers after deserializing manifest");
+                    Assert::AreEqual(doc->samplers.Size(), size_t(2U), L"Unexpected number of samplers after deserializing manifest");
 
-                    Assert::AreEqual(doc.samplers[0].minFilter.Get(), MinFilter_NEAREST, L"Sampler minification filter was not deserialized correctly");
-                    Assert::AreEqual(doc.samplers[0].magFilter.Get(), MagFilter_LINEAR, L"Sampler magnification filter was not deserialized correctly");
+                    Assert::AreEqual(doc->samplers[0].minFilter.Get(), MinFilter_NEAREST, L"Sampler minification filter was not deserialized correctly");
+                    Assert::AreEqual(doc->samplers[0].magFilter.Get(), MagFilter_LINEAR, L"Sampler magnification filter was not deserialized correctly");
 
-                    Assert::AreEqual(doc.samplers[0].wrapS, Wrap_REPEAT, L"Sampler default wrapS property was not deserialized correctly");
-                    Assert::AreEqual(doc.samplers[0].wrapT, Wrap_REPEAT, L"Sampler default wrapT property was not deserialized correctly");
+                    Assert::AreEqual(doc->samplers[0].wrapS, Wrap_REPEAT, L"Sampler default wrapS property was not deserialized correctly");
+                    Assert::AreEqual(doc->samplers[0].wrapT, Wrap_REPEAT, L"Sampler default wrapT property was not deserialized correctly");
 
-                    Assert::IsFalse(doc.samplers[1].minFilter.HasValue(), L"Sampler default minification filter was not unspecified");
-                    Assert::IsFalse(doc.samplers[1].magFilter.HasValue(), L"Sampler default magnification filter was not unspecified");
+                    Assert::IsFalse(doc->samplers[1].minFilter.HasValue(), L"Sampler default minification filter was not unspecified");
+                    Assert::IsFalse(doc->samplers[1].magFilter.HasValue(), L"Sampler default magnification filter was not unspecified");
 
-                    Assert::AreEqual(doc.samplers[1].wrapS, Wrap_MIRRORED_REPEAT, L"Sampler wrapS property was not deserialized correctly");
-                    Assert::AreEqual(doc.samplers[1].wrapT, Wrap_CLAMP_TO_EDGE, L"Sampler wrapT property was not deserialized correctly");
+                    Assert::AreEqual(doc->samplers[1].wrapS, Wrap_MIRRORED_REPEAT, L"Sampler wrapS property was not deserialized correctly");
+                    Assert::AreEqual(doc->samplers[1].wrapT, Wrap_CLAMP_TO_EDGE, L"Sampler wrapT property was not deserialized correctly");
                 }
             };
         }

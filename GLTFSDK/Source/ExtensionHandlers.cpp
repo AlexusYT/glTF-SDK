@@ -35,7 +35,7 @@ ExtensionPair ExtensionSerializer::Serialize(const Extension& extension, const g
     return { it->second, Process(it->first, extension, document, *this) };
 }
 
-std::unique_ptr<Extension> ExtensionDeserializer::Deserialize(const ExtensionPair& extensionPair, const glTFProperty& property) const
+std::unique_ptr<Extension> ExtensionDeserializer::Deserialize(const ExtensionPair& extensionPair, const glTFProperty& property)
 {
     auto it = nameToType.find(Detail::MakeNameKey(extensionPair.name, property));
 
@@ -49,5 +49,5 @@ std::unique_ptr<Extension> ExtensionDeserializer::Deserialize(const ExtensionPai
         throw GLTFException("No handler registered to deserialize the specified extension name");
     }
 
-    return Process({ it->second, it->first.second }, extensionPair.value, *this);
+    return Process({ it->second, it->first.second }, extensionPair.value, shared_from_this());
 }

@@ -37,7 +37,8 @@ add_custom_command(
     DEPENDS "${schema_deps}"
 )
 
-add_library(GLTFSDK ${source_files} ${CMAKE_BINARY_DIR}/GeneratedFiles/SchemaJson.h)
+add_library(GLTFSDK ${source_files} ${CMAKE_BINARY_DIR}/GeneratedFiles/SchemaJson.h
+        Source/GLTF.cpp)
 
 if (MSVC)
     # Generate PDB files in all configurations, not just Debug (/Zi)
@@ -59,5 +60,3 @@ target_include_directories(GLTFSDK
     PRIVATE "${CMAKE_SOURCE_DIR}/Built/Int"
     PRIVATE "${CMAKE_BINARY_DIR}/GeneratedFiles"
 )
-
-CreateGLTFInstallTargets(GLTFSDK ${Platform})

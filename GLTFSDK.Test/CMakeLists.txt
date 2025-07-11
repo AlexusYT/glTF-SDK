@@ -42,6 +42,5 @@ add_custom_command(TARGET GLTFSDK.Test
 )
 
 AddGLTFIOSAppProperties(GLTFSDK.Test)
-CreateGLTFInstallTargets(GLTFSDK.Test ${Platform})
 
 install(FILES ${PROJECT_BINARY_DIR}/$<CONFIG>/Resources/ DESTINATION ${CMAKE_SOURCE_DIR}/Built/Out/${Platform}/$<CONFIG>/${PROJECT_NAME}/Resources)

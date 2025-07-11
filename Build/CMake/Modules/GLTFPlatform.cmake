@@ -48,27 +48,6 @@ endfunction(GetGLTFPlatform)
 
 
 ###############################################################################
-# Set the default install TARGETS (Built/Out/<Platform>/<Config>/<Project>)
-# for the ARCHIVE, LIBRARY, RUNTIME, and BUNDLE folders
-###############################################################################
-
-function(CreateGLTFInstallTargets target platform)
-
-    install(TARGETS ${target}
-        ARCHIVE DESTINATION ${CMAKE_SOURCE_DIR}/Built/Out/${platform}/$<CONFIG>/${PROJECT_NAME}
-        LIBRARY DESTINATION ${CMAKE_SOURCE_DIR}/Built/Out/${platform}/$<CONFIG>/${PROJECT_NAME}
-        RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/Built/Out/${platform}/$<CONFIG>/${PROJECT_NAME}
-        BUNDLE DESTINATION ${CMAKE_SOURCE_DIR}/Built/Out/${platform}/$<CONFIG>/${PROJECT_NAME}
-    )
-
-    if (MSVC)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${PROJECT_NAME}.pdb DESTINATION ${CMAKE_SOURCE_DIR}/Built/Out/${platform}/$<CONFIG>/${PROJECT_NAME})
-    endif()
-
-endfunction(CreateGLTFInstallTargets)
-
-
-###############################################################################
 # Add the required properties and libraries to create an iOS Application
 # Assumes that the Info.plist is in the same folder as the caller
 ###############################################################################

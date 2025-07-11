@@ -88,7 +88,7 @@
 			"name": "DefaultMaterial",
 			"extensions": {
 				"KHR_materials_pbrSpecularGlossiness": {
-					"diffuseFactor": [0.49803921580314639, 0.49803921580314639, 0.49803921580314639, 1.0],
+					"diffuseFactor": [0.4980392158031464, 0.4980392158031464, 0.4980392158031464, 1.0],
 					"diffuseTexture": {
 						"index": 0
 					},
@@ -107,7 +107,7 @@
 			"name": "DefaultMaterial",
 			"extensions": {
 				"KHR_materials_pbrSpecularGlossiness": {
-					"diffuseFactor": [0.49803921580314639, 0.49803921580314639, 0.49803921580314639, 1.0],
+					"diffuseFactor": [0.4980392158031464, 0.4980392158031464, 0.4980392158031464, 1.0],
 					"diffuseTexture": {
 						"index": 1
 					},
@@ -126,7 +126,7 @@
 			"name": "DefaultMaterial",
 			"extensions": {
 				"KHR_materials_pbrSpecularGlossiness": {
-					"diffuseFactor": [0.49803921580314639, 0.49803921580314639, 0.49803921580314639, 1.0],
+					"diffuseFactor": [0.4980392158031464, 0.4980392158031464, 0.4980392158031464, 1.0],
 					"diffuseTexture": {
 						"index": 2
 					},

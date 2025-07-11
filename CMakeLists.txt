@@ -31,15 +31,8 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Build/CMake/Modules")
 
-if(NOT IOS)
-    # This variable is set by ios.toolchain.cmake.
-    # Notice that External/RapidJSON uses `find_package` for external project is ready.
-    # We have to prevent modification of RapidJSON_XXX variables in cache at this moment
-    find_package(RapidJSON CONFIG)
-endif()
-if(NOT RapidJSON_FOUND)
-    add_subdirectory(External/RapidJSON)
-endif()
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(nlohmann_json REQUIRED IMPORTED_TARGET nlohmann_json)
 find_package(GTest CONFIG)
 if(NOT GTest_FOUND)
     # import and alias just like it is already installed via VcPkg
@@ -49,16 +42,7 @@ endif()
 
 add_subdirectory(GLTFSDK)
 
-if(RapidJSON_FOUND)
-    target_include_directories(GLTFSDK
-        PUBLIC $<BUILD_INTERFACE:${RapidJSON_INCLUDE_DIRS}>
-    )
-elseif(TARGET RapidJSON)
-    get_target_property(RapidJSON_INCLUDE_DIRS RapidJSON INTERFACE_INCLUDE_DIRECTORIES)
-    target_include_directories(GLTFSDK
-        PUBLIC $<BUILD_INTERFACE:${RapidJSON_INCLUDE_DIRS}>
-    )
-endif()
+target_link_libraries(GLTFSDK PRIVATE ${nlohmann_json_LIBRARIES})
 
 if(ENABLE_UNIT_TESTS AND (NOT DEFINED EMSCRIPTEN))
     add_subdirectory(GLTFSDK.TestUtils)
@@ -68,5 +52,3 @@ endif()
 if(ENABLE_SAMPLES AND (NOT DEFINED EMSCRIPTEN))
     add_subdirectory(GLTFSDK.Samples)
 endif()
-
-INSTALL(DIRECTORY ${RapidJSON_INCLUDE_DIRS} DESTINATION ${CMAKE_SOURCE_DIR}/Built/Out/RapidJSON/ FILES_MATCHING PATTERN "*.h"  PATTERN "*.hpp")

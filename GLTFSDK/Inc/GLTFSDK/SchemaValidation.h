@@ -1,9 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#include <GLTFSDK/RapidJsonUtils.h>
-
 #include <memory>
+#include <nlohmann/json_fwd.hpp>
 
 namespace Microsoft
 {
@@ -16,6 +15,6 @@ namespace Microsoft
             virtual const char* GetSchemaContent(const std::string& uri) const = 0;
         };
 
-        void ValidateDocumentAgainstSchema(const rapidjson::Document& d, const std::string& schemaUri, std::unique_ptr<const ISchemaLocator> schemaLocator);
+        void ValidateDocumentAgainstSchema(const nlohmann::json& d, const std::string& schemaUri, std::unique_ptr<const ISchemaLocator> schemaLocator);
     }
 }
