@@ -1798,17 +1798,17 @@ namespace Microsoft
 
             friend void to_json(nlohmann::json& json, const Sampler& pType) {
                 nlohmann::to_json(json, static_cast<const glTFChildOfRootProperty&>(pType));
-                if (pType.magFilter) json["magFilter"] = pType.magFilter.Get();
-                if (pType.minFilter) json["minFilter"] = pType.minFilter.Get();
-                if (pType.wrapS != Wrap_REPEAT) json["wrapS"] = pType.wrapS;
-                if (pType.wrapT != Wrap_REPEAT) json["wrapT"] = pType.wrapT;
+                if (pType.magFilter) json["magFilter"] = static_cast<uint32_t>(pType.magFilter.Get());
+                if (pType.minFilter) json["minFilter"] = static_cast<uint32_t>(pType.minFilter.Get());
+                if (pType.wrapS != Wrap_REPEAT) json["wrapS"] = static_cast<uint32_t>(pType.wrapS);
+                if (pType.wrapT != Wrap_REPEAT) json["wrapT"] = static_cast<uint32_t>(pType.wrapT);
             }
 
             friend void from_json(const nlohmann::json& json, Sampler& pType) {
                 nlohmann::from_json(json, static_cast<glTFChildOfRootProperty&>(pType));
 
-                pType.wrapT = GetSamplerWrapMode(json.value("wrapT", Wrap_REPEAT));
-                pType.wrapS = GetSamplerWrapMode(json.value("wrapS", Wrap_REPEAT));
+                pType.wrapT = GetSamplerWrapMode(json.value("wrapT", static_cast<uint32_t>(Wrap_REPEAT)));
+                pType.wrapS = GetSamplerWrapMode(json.value("wrapS", static_cast<uint32_t>(Wrap_REPEAT)));
 
                 if (auto itMin = json.find("minFilter"); itMin != json.end())
                     pType.minFilter = GetSamplerMinFilterMode(itMin.value().get<uint32_t>());
