@@ -37,8 +37,6 @@ namespace Microsoft
 
             std::string defaultSceneId;
 
-            //should be removed
-            std::shared_ptr<ExtensionSerializer> serializer;
         protected:
             Document();
             Document(Asset&& asset);

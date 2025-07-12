@@ -168,7 +168,7 @@ namespace Microsoft
                 {
                     auto doc = Document::create();
 
-                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, true);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocument);
                 }
 
@@ -177,7 +177,7 @@ namespace Microsoft
                     auto doc = Document::create();
                     doc->scenes.Append(Scene(), AppendIdPolicy::GenerateOnEmpty);
 
-                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, true);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndScene);
                 }
 
@@ -186,7 +186,7 @@ namespace Microsoft
                     auto doc = Document::create();
                     doc->SetDefaultScene(Scene(), AppendIdPolicy::GenerateOnEmpty);
 
-                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, true);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndSceneAsDefault);
                 }
 
@@ -197,7 +197,7 @@ namespace Microsoft
                     scene.id = "foo";
                     doc->scenes.Append(std::move(scene));
 
-                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, true);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndNonDefaultScene);
                 }
 
@@ -208,7 +208,7 @@ namespace Microsoft
                     scene.id = "foo";
                     doc->SetDefaultScene(std::move(scene));
 
-                    const auto output = Serializer::Serialize(doc, SerializeFlags::Pretty);
+                    const auto output = Serializer::Serialize(doc, true);
                     Assert::AreEqual(output.c_str(), c_expectedDefaultDocumentAndNonDefaultSceneAsDefault);
                 }
 

@@ -26,7 +26,7 @@ namespace Microsoft
 
                     // Serialize Default Document -> Json string -> Stream
                     auto doc = Document::create();
-                    const auto serialiedJson = Serializer::Serialize(doc, SerializeFlags::None);
+                    const auto serialiedJson = Serializer::Serialize(doc);
                     writer.Flush(serialiedJson, uri);
                     auto stream = streamWriter->GetInputStream(uri);
 

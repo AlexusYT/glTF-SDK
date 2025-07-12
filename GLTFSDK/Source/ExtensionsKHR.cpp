@@ -5,24 +5,9 @@
 #include <GLTFSDK/ExtensionsKHR.h>
 
 #include <GLTFSDK/Document.h>
+#include <GLTFSDK/PropertyType.h>
 
 using namespace Microsoft::glTF;
-
-std::shared_ptr<ExtensionSerializer> KHR::GetKHRExtensionSerializer()
-{
-    using namespace Materials;
-    using namespace MeshPrimitives;
-    using namespace TextureInfos;
-
-    auto extensionSerializer = std::make_shared<ExtensionSerializer>();
-    extensionSerializer->AddHandler<PBRSpecularGlossiness, Material>(PBRSPECULARGLOSSINESS_NAME, SerializePBRSpecGloss);
-    extensionSerializer->AddHandler<Unlit, Material>(UNLIT_NAME, SerializeUnlit);
-    extensionSerializer->AddHandler<DracoMeshCompression, MeshPrimitive>(DRACOMESHCOMPRESSION_NAME, SerializeDracoMeshCompression);
-    extensionSerializer->AddHandler<TextureTransform, TextureInfo>(TEXTURETRANSFORM_NAME, SerializeTextureTransform);
-    extensionSerializer->AddHandler<TextureTransform, Material::NormalTextureInfo>(TEXTURETRANSFORM_NAME, SerializeTextureTransform);
-    extensionSerializer->AddHandler<TextureTransform, Material::OcclusionTextureInfo>(TEXTURETRANSFORM_NAME, SerializeTextureTransform);
-    return extensionSerializer;
-}
 
 std::shared_ptr<ExtensionDeserializer> KHR::GetKHRExtensionDeserializer()
 {
@@ -67,16 +52,50 @@ bool KHR::Materials::PBRSpecularGlossiness::IsEqual(const Extension& rhs) const
         && this->specularGlossinessTexture == other->specularGlossinessTexture;
 }
 
-nlohmann::json KHR::Materials::SerializePBRSpecGloss(const Materials::PBRSpecularGlossiness& specGloss, const Document& gltfDocument, const ExtensionSerializer& extensionSerializer)  {
-    return specGloss;
+void KHR::Materials::PBRSpecularGlossiness::serialize(nlohmann::json &json, const PropertyType & pPropertyType) const {
+    if (!pPropertyType.isMaterial()) return;
+    nlohmann::to_json(json, static_cast<const glTFProperty&>(*this));
+    if (diffuseFactor != Color4(1.0f, 1.0f, 1.0f, 1.0f))
+        json["diffuseFactor"] = diffuseFactor;
+
+    if (!diffuseTexture.textureId.empty())
+        json["diffuseTexture"] = diffuseTexture;
+
+    if (specularFactor != Color3(1.0f, 1.0f, 1.0f))
+        json["specularFactor"] = specularFactor;
+
+    if (glossinessFactor != 1.0)
+        json["glossinessFactor"] = glossinessFactor;
+
+    if (!specularGlossinessTexture.textureId.empty())
+        json["specularGlossinessTexture"] = specularGlossinessTexture;
+}
+
+void KHR::Materials::PBRSpecularGlossiness::deserialize(const nlohmann::json &json) {
+
+    nlohmann::from_json(json, static_cast<glTFProperty&>(*this));
+
+    if (auto iter = json.find("diffuseFactor"); iter != json.end())
+        iter.value().get_to(diffuseFactor);
+
+    if (auto iter = json.find("diffuseTexture"); iter != json.end())
+        iter.value().get_to(diffuseTexture);
+
+    if (auto iter = json.find("specularFactor"); iter != json.end())
+        iter.value().get_to(specularFactor);
+
+    glossinessFactor = json.value("glossinessFactor", 1.0f);
+
+    if (auto iter = json.find("specularGlossinessTexture"); iter != json.end())
+        iter.value().get_to(specularGlossinessTexture);
 }
 
 std::unique_ptr<Extension> KHR::Materials::DeserializePBRSpecGloss(const nlohmann::json& json, const std::shared_ptr<ExtensionDeserializer>& extensionDeserializer)
 {
-    Materials::PBRSpecularGlossiness specGloss;
-    json.get_to(specGloss);
-    specGloss.deserializeExtensions(extensionDeserializer);
-    return std::make_unique<PBRSpecularGlossiness>(specGloss);
+    auto specGloss = std::make_unique<PBRSpecularGlossiness>();
+    specGloss->deserialize(json);
+    specGloss->deserializeExtensions(extensionDeserializer);
+    return specGloss;
 }
 
 // KHR::Materials::Unlit
@@ -91,17 +110,17 @@ bool KHR::Materials::Unlit::IsEqual(const Extension& rhs) const
     return dynamic_cast<const Unlit*>(&rhs) != nullptr;
 }
 
-nlohmann::json KHR::Materials::SerializeUnlit(const Materials::Unlit &extension, const Document &gltfDocument,
-                                              const ExtensionSerializer &extensionSerializer){
-    return extension;
+void KHR::Materials::Unlit::serialize(nlohmann::json &json, const PropertyType &pPropertyType) const {
+    if (!pPropertyType.isMaterial()) return;
+    nlohmann::to_json(json, static_cast<const glTFProperty&>(*this));
 }
 
 std::unique_ptr<Extension> KHR::Materials::DeserializeUnlit(const nlohmann::json& json, const std::shared_ptr<ExtensionDeserializer>& extensionDeserializer)
 {
-    Unlit unlit;
-    json.get_to(unlit);
-    unlit.deserializeExtensions(extensionDeserializer);
-    return std::make_unique<Unlit>(unlit);
+    auto unlit = std::make_unique<Unlit>();
+    unlit->deserialize(json);
+    unlit->deserializeExtensions(extensionDeserializer);
+    return unlit;
 }
 
 // KHR::MeshPrimitives::DracoMeshCompression
@@ -121,7 +140,9 @@ bool KHR::MeshPrimitives::DracoMeshCompression::IsEqual(const Extension& rhs) co
         && this->attributes == other->attributes;
 }
 
-void KHR::MeshPrimitives::DracoMeshCompression::serialize(nlohmann::json &json) const {
+void KHR::MeshPrimitives::DracoMeshCompression::serialize(nlohmann::json &json, const PropertyType & pPropertyType) const {
+    if (!pPropertyType.isMeshPrimitive()) return;
+    nlohmann::to_json(json, static_cast<const glTFProperty&>(*this));
 
     if (!bufferViewId.empty())
         json["bufferView"] = gltfDocument->bufferViews.GetIndex(bufferViewId);
@@ -134,19 +155,33 @@ void KHR::MeshPrimitives::DracoMeshCompression::serialize(nlohmann::json &json) 
 
         json["attributes"] = attributesValue;
     }
-
 }
 
-nlohmann::json KHR::MeshPrimitives::SerializeDracoMeshCompression(
-    const MeshPrimitives::DracoMeshCompression &dracoMeshCompression, const Document &glTFdoc,
-    const ExtensionSerializer &extensionSerializer) {
-    return dracoMeshCompression;
+void KHR::MeshPrimitives::DracoMeshCompression::deserialize(const nlohmann::json &json) {
+    nlohmann::from_json(json, static_cast<glTFProperty&>(*this));
+
+    if (auto iter = json.find("bufferView"); iter != json.end())
+        bufferViewId = std::to_string(iter.value().get<uint32_t>());
+
+
+    if (auto it = json.find("attributes"); it != json.end()) {
+        if (!it.value().is_object())
+            throw GLTFException("Member attributes of " + std::string(DRACOMESHCOMPRESSION_NAME) + " is not an object.");
+
+        for (const auto& attribute : it.value().items()) {
+            auto &name = attribute.key();
+            if (!attribute.value().is_number_integer())
+                throw GLTFException("Attribute " + std::string(name) + " of " + std::string(DRACOMESHCOMPRESSION_NAME) + " is not a number.");
+
+            attributes.emplace(name, attribute.value().get<uint32_t>());
+        }
+    }
 }
 
 std::unique_ptr<Extension> KHR::MeshPrimitives::DeserializeDracoMeshCompression(const nlohmann::json& json, const std::shared_ptr<ExtensionDeserializer>& extensionDeserializer)
 {
     auto extension = std::make_unique<DracoMeshCompression>();
-    json.get_to(*extension);
+    extension->deserialize(json);
     extension->deserializeExtensions(extensionDeserializer);
     return extension;
 }
@@ -186,18 +221,55 @@ bool KHR::TextureInfos::TextureTransform::IsEqual(const Extension& rhs) const
         && this->texCoord == other->texCoord;
 }
 
-nlohmann::json KHR::TextureInfos::SerializeTextureTransform(const TextureTransform &textureTransform,
-                                                            const Document &gltfDocument,
-                                                            const ExtensionSerializer &extensionSerializer){
+void KHR::TextureInfos::TextureTransform::serialize(nlohmann::json &json, const PropertyType & pPropertyType) const {
+    if (!pPropertyType.isTextureInfo() &&
+        !pPropertyType.isType<Material::NormalTextureInfo>() &&
+        !pPropertyType.isType<Material::OcclusionTextureInfo>()) return;
 
-    return textureTransform;
+    nlohmann::to_json(json, static_cast<const glTFProperty&>(*this));
+    if (offset != Vector2::ZERO) json["offset"] = offset;
+    if (rotation != 0.0f) json["rotation"] = rotation;
+    if (scale != Vector2::ONE) json["scale"] = scale;
+    if (texCoord) json["texCoord"] = texCoord.Get();
+}
+
+void KHR::TextureInfos::TextureTransform::deserialize(const nlohmann::json &json) {
+    nlohmann::from_json(json, static_cast<glTFProperty&>(*this));
+
+
+    if (auto iter = json.find("offset"); iter != json.end()){
+        auto &val = iter.value();
+        if (!val.is_array())
+            throw GLTFException("Offset member of " + std::string(TEXTURETRANSFORM_NAME) + " must be an array.");
+
+        if (val.size() != 2)
+            throw GLTFException("Offset member of " + std::string(TEXTURETRANSFORM_NAME) + " must have two values.");
+
+        val.get_to(offset);
+    }
+
+    rotation = json.value("rotation", 0.0f);
+
+    if (auto iter = json.find("scale"); iter != json.end()) {
+        auto &val = iter.value();
+        if (!val.is_array())
+            throw GLTFException("Scale member of " + std::string(TEXTURETRANSFORM_NAME) + " must be an array.");
+
+        if (val.size() != 2)
+            throw GLTFException("Scale member of " + std::string(TEXTURETRANSFORM_NAME) + " must have two values.");
+
+        val.get_to(scale);
+    }
+
+    if (auto iter = json.find("texCoord"); iter != json.end())
+        texCoord = iter.value().get<size_t>();
 }
 
 std::unique_ptr<Extension> KHR::TextureInfos::DeserializeTextureTransform(const nlohmann::json& json, const std::shared_ptr<ExtensionDeserializer>& extensionDeserializer)
 {
-    TextureTransform textureTransform;
-    json.get_to(textureTransform);
-    textureTransform.deserializeExtensions(extensionDeserializer);
+    auto textureTransform = std::make_unique<TextureTransform>();
+    textureTransform->deserialize(json);
+    textureTransform->deserializeExtensions(extensionDeserializer);
 
-    return std::make_unique<TextureTransform>(textureTransform);
+    return textureTransform;
 }

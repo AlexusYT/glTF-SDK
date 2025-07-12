@@ -16,6 +16,7 @@
 #include <fstream>
 #include <memory>
 #include <memory>
+#include <GLTFSDK/PropertyType.h>
 
 using namespace glTF::UnitTest;
 
@@ -48,11 +49,18 @@ R"({
 
     struct TestExtension : Extension
     {
+        static inline size_t handlerCountDocument = 0;
+        static inline size_t handlerCountScene = 0;
+        static inline size_t handlerCountAll = 0;
         TestExtension(bool flag) : flag(flag) {}
 
         std::unique_ptr<Extension> Clone() const override
         {
             return std::make_unique<TestExtension>(*this);
+        }
+
+        std::string getName() const override {
+            return TestExtensionName;
         }
 
         bool IsEqual(const Extension& rhs) const override
@@ -66,13 +74,18 @@ R"({
 
             return isEqual;
         }
-        friend void to_json(nlohmann::json& json, const TestExtension& pType) {
-            json["flag"] = pType.flag;
+
+        void serialize(nlohmann::json &json, const PropertyType &pPropertyType) const override {
+            if (pPropertyType.isType<Document>()) handlerCountDocument++;
+            else if (pPropertyType.isScene()) handlerCountScene++;
+            else handlerCountAll++;
+            json["flag"] = flag;
         }
 
-        friend void from_json(const nlohmann::json& json, TestExtension& pType) {
-            json.at("flag").get_to(pType.flag);
+        void deserialize(const nlohmann::json &json) override {
+            json.at("flag").get_to(flag);
         }
+
         bool flag;
     };
 
@@ -106,10 +119,6 @@ R"({
     private:
         std::unordered_map<std::string, std::string> schemaUriMap;
     };
-
-    nlohmann::json SerializeTestExtension(const TestExtension& extension) {
-        return extension;
-    }
 
     std::unique_ptr<Extension> DeserializeTestExtension(const nlohmann::json& json, bool isValidationRequired) {
         if (isValidationRequired)
@@ -293,12 +302,11 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_cubeJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
                     auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                     // Serialize Document back to json
-                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputJson = Serializer::Serialize(doc);
                     auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output Documents
@@ -310,7 +318,6 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_dracoBox);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
                     auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
@@ -326,7 +333,7 @@ namespace Microsoft
                     Assert::AreEqual<size_t>(draco.attributes[ACCESSOR_NORMAL], 0);
 
                     // Serialize GLTFDocument back to json
-                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputJson = Serializer::Serialize(doc);
                     auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output GLTFDocuments
@@ -539,8 +546,7 @@ namespace Microsoft
                     checkTextureInfo(doc->materials[0], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f), 1234);
                     checkTextureInfo(doc->materials[1], Vector2(-0.2f, -0.1f), 0.3f, Vector2(1.5f, 1.5f));
 
-                    const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
-                    auto tt = Serializer::Serialize(doc, extensionSerializer);
+                    auto tt = Serializer::Serialize(doc);
 
                     auto roundTrippedDoc = Deserializer::Deserialize(tt, extensionDeserializer);
                     Assert::IsTrue(*doc == *roundTrippedDoc, L"Input gltf and output gltf are not equal");
@@ -551,12 +557,11 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_textureTransformTestJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
                     auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                     // Serialize GLTFDocument back to json
-                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputJson = Serializer::Serialize(doc);
                     auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output GLTFDocuments
@@ -569,12 +574,11 @@ namespace Microsoft
                     const auto inputJson = ReadLocalJson(c_textureTransformTestSGOnlyJson);
 
                     const auto extensionDeserializer = KHR::GetKHRExtensionDeserializer();
-                    const auto extensionSerializer = KHR::GetKHRExtensionSerializer();
 
                     auto doc = Deserializer::Deserialize(inputJson, extensionDeserializer);
 
                     // Serialize GLTFDocument back to json
-                    auto outputJson = Serializer::Serialize(doc, extensionSerializer);
+                    auto outputJson = Serializer::Serialize(doc);
                     auto outputDoc = Deserializer::Deserialize(outputJson, extensionDeserializer);
 
                     // Compare input and output GLTFDocuments
@@ -600,43 +604,11 @@ namespace Microsoft
                     document->SetExtension<TestExtension>(false);
                     document->extensionsUsed.emplace(TestExtensionName);
 
-                    auto extensionSerializer = std::make_shared<ExtensionSerializer>();
+                    const auto actual = Serializer::Serialize(document, true);
 
-                    size_t handlerCountDocument = 0;
-                    size_t handlerCountScene = 0;
-                    size_t handlerCountAll = 0;
-
-                    extensionSerializer->AddHandler<TestExtension, Document>(TestExtensionName,
-                        [&handlerCountDocument](const TestExtension& extension, const Document&, const ExtensionSerializer& /*extensionSerializer*/)
-                    {
-                        ++handlerCountDocument;
-                        return SerializeTestExtension(extension);
-                    });
-
-                    extensionSerializer->AddHandler<TestExtension, Scene>(TestExtensionName,
-                        [&handlerCountScene](const TestExtension& extension, const Document&, const ExtensionSerializer& /*extensionSerializer*/)
-                    {
-                        ++handlerCountScene;
-                        return SerializeTestExtension(extension);
-                    });
-
-                    // The 'all properties' handler will process the Node's extension
-                    extensionSerializer->AddHandler<TestExtension>(TestExtensionName,
-                        [&handlerCountAll](const TestExtension& extension, const Document&, const ExtensionSerializer& /*extensionSerializer*/)
-                    {
-                        ++handlerCountAll;
-                        return SerializeTestExtension(extension);
-                    });
-
-                    Assert::IsTrue(extensionSerializer->HasHandler<TestExtension, Document>());
-                    Assert::IsTrue(extensionSerializer->HasHandler<TestExtension, Scene>());
-                    Assert::IsTrue(extensionSerializer->HasHandler<TestExtension>());
-
-                    const auto actual = Serializer::Serialize(document, extensionSerializer, SerializeFlags::Pretty);
-
-                    Assert::AreEqual(size_t(1), handlerCountDocument, L"Document extension serializer handler called an unexpected number of times");
-                    Assert::AreEqual(size_t(1), handlerCountScene, L"Scene extension serializer handler called an unexpected number of times");
-                    Assert::AreEqual(size_t(1), handlerCountAll, L"Generic extension serializer handler called an unexpected number of times");
+                    Assert::AreEqual(size_t(1), TestExtension::handlerCountDocument, L"Document extension serializer handler called an unexpected number of times");
+                    Assert::AreEqual(size_t(1), TestExtension::handlerCountScene, L"Scene extension serializer handler called an unexpected number of times");
+                    Assert::AreEqual(size_t(1), TestExtension::handlerCountAll, L"Generic extension serializer handler called an unexpected number of times");
 
                     Assert::AreEqual(expectedExtensionAddHandler, actual.c_str(), L"Document and Scene extension serialization did not produce the expected output");
                 }

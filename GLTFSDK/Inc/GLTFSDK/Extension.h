@@ -4,12 +4,16 @@
 #pragma once
 
 #include <memory>
+#include <typeindex>
+#include <nlohmann/json_fwd.hpp>
 
 namespace Microsoft
 {
     namespace glTF
     {
-        class Extension
+    class PropertyType;
+
+    class Extension
         {
         public:
             virtual ~Extension() = default;
@@ -19,6 +23,12 @@ namespace Microsoft
 
             bool operator==(const Extension& rhs) const;
             bool operator!=(const Extension& rhs) const;
+
+            virtual std::string getName() const = 0;
+
+            virtual void serialize(nlohmann::json& json, const PropertyType & pPropertyType) const;
+
+            virtual void deserialize(const nlohmann::json& json);
 
         protected:
             Extension() = default;

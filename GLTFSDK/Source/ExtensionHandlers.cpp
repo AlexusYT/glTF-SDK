@@ -18,23 +18,6 @@ Detail::NameKey Detail::MakeNameKey(const std::string& name, const glTFProperty&
     return { name, typeid(property) };
 }
 
-ExtensionPair ExtensionSerializer::Serialize(const Extension& extension, const glTFProperty& property, const Document& document) const
-{
-    auto it = typeToName.find(Detail::MakeTypeKey(extension, property));
-
-    if (it == typeToName.end())
-    {
-        it = typeToName.find(Detail::MakeTypeKey<glTFPropertyAll>(extension));
-    }
-
-    if (it == typeToName.end())
-    {
-        throw GLTFException("No handler registered to serialize the passed extension type");
-    }
-
-    return { it->second, Process(it->first, extension, document, *this) };
-}
-
 std::unique_ptr<Extension> ExtensionDeserializer::Deserialize(const ExtensionPair& extensionPair, const glTFProperty& property)
 {
     auto it = nameToType.find(Detail::MakeNameKey(extensionPair.name, property));

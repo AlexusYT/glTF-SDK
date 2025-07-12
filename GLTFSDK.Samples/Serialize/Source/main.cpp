@@ -234,7 +234,7 @@ namespace
         try
         {
             // Serialize the glTF Document into a JSON manifest
-            manifest = Serializer::Serialize(document, SerializeFlags::Pretty);
+            manifest = Serializer::Serialize(document, true);
         }
         catch (const GLTFException& ex)
         {

@@ -183,12 +183,6 @@ namespace Microsoft
 
         class Document;
 
-        class ExtensionSerializer final : public ExtensionHandlers<nlohmann::json, Extension, Document, ExtensionSerializer>
-        {
-        public:
-            ExtensionPair Serialize(const Extension& extension, const glTFProperty& property, const Document& document) const;
-        };
-
         class ExtensionDeserializer final : public ExtensionHandlers<std::unique_ptr<Extension>, nlohmann::json, std::shared_ptr<ExtensionDeserializer>>, public std::enable_shared_from_this<ExtensionDeserializer>
         {
         public:

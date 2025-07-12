@@ -599,7 +599,7 @@ namespace Microsoft
                         bufferBuilder.Output(*gltfDocument);
                     }
 
-                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, SerializeFlags::Pretty);
+                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, true);
 
                     Assert::AreEqual(expectedBufferBuilderMultiple, gltfManifest.c_str());
                 }
@@ -626,7 +626,7 @@ namespace Microsoft
                     auto gltfDocument = Document::create();
                     bufferBuilder.Output(*gltfDocument);
 
-                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, SerializeFlags::Pretty);
+                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, true);
 
                     Assert::AreEqual(expectedBufferBuilder, gltfManifest.c_str());
                 }
@@ -725,7 +725,7 @@ namespace Microsoft
                     auto gltfDocument= Document::create();
                     bufferBuilder.Output(*gltfDocument);
 
-                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, SerializeFlags::Pretty);
+                    const std::string gltfManifest = Serializer::Serialize(gltfDocument, true);
 
                     Assert::AreEqual(expectedBufferBuilderMultipleAccessor, gltfManifest.c_str());
                 }

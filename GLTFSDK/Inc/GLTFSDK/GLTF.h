@@ -24,7 +24,6 @@ namespace Microsoft
 {
     namespace glTF
     {
-    class ExtensionSerializer;
     struct Animation;
     class ExtensionDeserializer;
     class Document;

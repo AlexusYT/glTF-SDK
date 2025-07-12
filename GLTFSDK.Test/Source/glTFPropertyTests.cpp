@@ -26,7 +26,11 @@ namespace
     };
 
     template<int N>
-    class TestExtension : public TestExtensionBase<TestExtension<N>> {};
+    class TestExtension : public TestExtensionBase<TestExtension<N>> {
+        std::string getName() const override {
+            return "";
+        }
+    };
 }
 
 using namespace glTF::UnitTest;

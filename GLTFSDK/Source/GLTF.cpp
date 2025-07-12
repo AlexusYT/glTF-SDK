@@ -5,6 +5,7 @@
 #include <GLTFSDK/Document.h>
 #include <GLTFSDK/ExtensionHandlers.h>
 #include <GLTFSDK/GLTF.h>
+#include <GLTFSDK/PropertyType.h>
 
 namespace Microsoft::glTF {
 void glTFProperty::serializeExtensions( nlohmann::json& json) const {
@@ -13,7 +14,10 @@ void glTFProperty::serializeExtensions( nlohmann::json& json) const {
     if (extensions.empty() && registeredExtensionsVec.empty()) return;
     // Add registered extensions
     for (const auto& extension : registeredExtensionsVec) {
-        const auto extensionPair = gltfDocument->serializer->Serialize(extension, *this, *gltfDocument);
+        auto &ext = extension.get();
+        ExtensionPair extensionPair;
+        extensionPair.name = ext.getName();
+        ext.serialize(extensionPair.value, PropertyType(typeid(*this)));
 
         if (HasUnregisteredExtension(extensionPair.name))
             throw GLTFException("Registered extension '" + extensionPair.name + "' is also present as an unregistered extension.");
